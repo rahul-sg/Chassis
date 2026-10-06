@@ -6,7 +6,7 @@ the earlier model comes back with a note saying why. A length you entered carrie
 """
 from __future__ import annotations
 
-from .. import store
+from .. import jobs, store
 
 RETAKE_NOTES = ("retakeError", "retakeJob")
 
@@ -28,14 +28,18 @@ def finished(car_id: str) -> None:
     store.update_item("cars", car_id, {"previousCapture": None})
 
 
-def failed(car_id: str, job: str, error: str | None) -> None:
-    """The new video didn't make a model: bring back the earlier one, if there was one."""
+def failed(car_id: str, job: str, error: str | None, cancelled: bool = False) -> None:
+    """The new video didn't make a model (or you stopped it): bring back the earlier model, if
+    there was one. A stop you chose leaves no note behind."""
     car = store.get_item("cars", car_id)
     if car is None:
         return
     earlier = car.get("previousCapture")
     if earlier:
-        store.update_item("cars", car_id, {"capture": {**earlier, "retakeError": error, "retakeJob": job}, "previousCapture": None})
+        note = {} if cancelled else {"retakeError": error, "retakeJob": job}
+        store.update_item("cars", car_id, {"capture": {**earlier, **note}, "previousCapture": None})
+    elif cancelled:
+        store.update_item("cars", car_id, {"capture": None})
     else:
         cap = car.get("capture") or {}
         store.update_item("cars", car_id, {"capture": {**cap, "status": "failed", "error": error}})
@@ -48,3 +52,11 @@ def showing(car: dict) -> dict:
     if cap.get("status") != "done" and (car.get("previousCapture") or {}).get("status") == "done":
         return car["previousCapture"]
     return cap
+
+
+def _on_failed(state: dict) -> None:
+    failed(state["carId"], state["id"], state.get("error"), cancelled=state.get("status") == "cancelled")
+
+
+# Registered here, not in the pipeline, so the API process (which stops paused jobs) has it too.
+jobs.RUNNERS["capture:failed"] = _on_failed

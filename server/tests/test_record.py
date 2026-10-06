@@ -53,3 +53,27 @@ def test_a_first_capture_that_fails_is_marked_failed():
     record.failed(car["id"], "first", "no frames")
     c = store.get_item("cars", car["id"])
     assert c["capture"]["status"] == "failed" and c["capture"]["error"] == "no frames"
+
+
+def test_stopping_a_retake_brings_the_earlier_model_back_without_a_note():
+    _isolated()
+    car = _car_with_model()
+    store.update_item("cars", car["id"], record.start(car, "new", "/media/v.mov"))
+    record.failed(car["id"], "new", "Stopped so you can film it again.", cancelled=True)
+    c = store.get_item("cars", car["id"])
+    assert c["capture"]["job"] == "old" and "retakeError" not in c["capture"]
+
+
+def test_stopping_a_first_capture_leaves_no_capture():
+    _isolated()
+    car = store.add_item("cars", {"identity": {"make": "Lexus", "model": "UX"}})
+    store.update_item("cars", car["id"], record.start(car, "first", "/media/v.mov"))
+    record.failed(car["id"], "first", "Stopped", cancelled=True)
+    assert store.get_item("cars", car["id"])["capture"] is None
+
+
+def test_the_api_can_stop_a_capture_without_loading_the_pipeline():
+    # The API only imports record; stopping a paused capture must still restore the car.
+    from garage import jobs
+
+    assert "capture:failed" in jobs.RUNNERS

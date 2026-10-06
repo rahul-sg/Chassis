@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { CONDITIONS, listingTitle, writeListing, type IdentifiedCar } from '../../lib/listing';
 import { href } from '../../lib/route';
-import { useGarage } from '../../lib/store';
+import { carName, useGarage } from '../../lib/store';
 import type { Backdrop, Car, SellInfo, SpecSheet, StudioShot } from '../../lib/types';
 import { fetchSpecs } from '../../lib/vehicle';
+import { KbbLink } from '../../ui/KbbLink';
 
 const BACKDROPS: { id: Backdrop; label: string; swatch: string }[] = [
   { id: 'studio', label: 'Studio grey', swatch: 'linear-gradient(#eeeeec, #d4d4d2)' },
@@ -247,6 +248,7 @@ function SellKit({ car }: { car: IdentifiedCar }) {
             />
           </label>
         </div>
+        <KbbLink identity={i}>Not sure what to ask? Kelley Blue Book gives trade-in and private-party values for your mileage and ZIP code.</KbbLink>
         <div className="checks">
           <label className={openMarks ? '' : 'is-off'}>
             <input
@@ -259,7 +261,7 @@ function SellKit({ car }: { car: IdentifiedCar }) {
               ? `Mention the ${openMarks} open mark${openMarks === 1 ? '' : 's'} from the Condition tab`
               : 'Mention open marks from the Condition tab (there are none)'}
           </label>
-          {car.nickname && (
+          {car.nickname && car.nickname !== carName(car.identity) && (
             <label>
               <input type="checkbox" checked={!!sell.useNickname} onChange={(e) => set({ useNickname: e.target.checked })} />
               Use “{car.nickname}” as the listing page’s title

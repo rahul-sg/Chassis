@@ -12,7 +12,7 @@ export function JobProgress({
   done,
 }: {
   jobId: string;
-  titles: { running: string; done: string; failed: string };
+  titles: { running: string; done: string; failed: string; paused?: string };
   /** What to offer once it's finished. */
   done?: ReactNode;
 }) {
@@ -27,7 +27,7 @@ export function JobProgress({
         const j = await api.get<Job>(`/jobs/${jobId}`);
         if (!live) return;
         setJob(j);
-        if (j.status === 'done' || j.status === 'failed') {
+        if (j.status === 'done' || j.status === 'failed' || j.status === 'cancelled' || j.status === 'paused') {
           await load();
           return;
         }
@@ -46,13 +46,37 @@ export function JobProgress({
 
   if (!job) return <div className="sheet sheet--loading" />;
   const elapsed = (job.finishedAt ?? now) - (job.startedAt ?? job.createdAt);
-  const state = job.status === 'done' ? 'Done' : job.status === 'failed' ? 'Stopped' : job.status === 'queued' ? 'Waiting to start' : 'Working on this Mac';
+  const state =
+    job.status === 'done'
+      ? 'Done'
+      : job.status === 'paused'
+        ? 'Needs you'
+        : job.status === 'failed' || job.status === 'cancelled'
+          ? 'Stopped'
+          : job.status === 'queued'
+            ? 'Waiting to start'
+            : 'Working on this Mac';
+  const act = async (what: 'continue' | 'cancel') => {
+    await api.post(`/jobs/${job.id}/${what}`, {});
+    await load();
+    setRound((r) => r + 1);
+  };
   return (
     <section className="jobview">
       <header className="jobview__head">
         <div>
           <p className="eyebrow">{state}</p>
-          <h2 className="display">{job.status === 'done' ? titles.done : job.status === 'failed' ? titles.failed : titles.running}</h2>
+          <h2 className="display">
+            {job.status === 'done'
+              ? titles.done
+              : job.status === 'paused'
+                ? (titles.paused ?? 'Check before going on')
+                : job.status === 'failed'
+                  ? titles.failed
+                  : job.status === 'cancelled'
+                    ? 'Stopped'
+                    : titles.running}
+          </h2>
         </div>
         <span className="jobview__time">{fmt(elapsed)}</span>
       </header>
@@ -75,6 +99,24 @@ export function JobProgress({
           </li>
         ))}
       </ol>
+      {job.status === 'paused' && (
+        <div className="jobask">
+          <ul>
+            {(job.issues ?? []).map((i) => (
+              <li key={i}>{i}</li>
+            ))}
+          </ul>
+          <p className="muted">Building takes 15–30 minutes, and a video like this usually comes out smeared. Film it again, or build it anyway.</p>
+          <div className="actions">
+            <button className="btn btn--accent" onClick={() => void act('cancel')}>
+              Use another video
+            </button>
+            <button className="btn" onClick={() => void act('continue')}>
+              Build anyway
+            </button>
+          </div>
+        </div>
+      )}
       {job.status === 'failed' && (
         <>
           <p className="note note--bad">{job.error}</p>
@@ -93,7 +135,7 @@ export function JobProgress({
         </>
       )}
       {job.status === 'done' && done && <div className="actions">{done}</div>}
-      {job.status !== 'done' && job.status !== 'failed' && (
+      {(job.status === 'queued' || job.status === 'running') && (
         <p className="muted">You can leave this page; it keeps going in the background.</p>
       )}
     </section>

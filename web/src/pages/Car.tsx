@@ -11,6 +11,7 @@ import { Car360 } from './car/Car360';
 import { CarCondition } from './car/Condition';
 import { CarMods } from './car/Mods';
 import { CarSell } from './car/Sell';
+import { KbbLink } from '../ui/KbbLink';
 
 const TABS: { id: CarTab; label: string }[] = [
   { id: '360', label: '360' },
@@ -79,6 +80,10 @@ function Specs({ car }: { car: Car }) {
           if (s.variant !== car.specs?.variant || !car.specs) void updateCar(car.id, { specs: s });
         }}
       />
+      <section className="valuebox">
+        <h3 className="field__label">Value</h3>
+        <KbbLink identity={i} />
+      </section>
     </div>
   );
 }

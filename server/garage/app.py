@@ -178,6 +178,23 @@ def start_capture(car_id: str, file: UploadFile):
     return job
 
 
+@app.post("/api/cars/{car_id}/capture/rebuild")
+def rebuild_capture(car_id: str):
+    """Build the 3D model again from the video already on file (after the processing improves)."""
+    car = store.get_item("cars", car_id)
+    if car is None:
+        raise HTTPException(404, "Not found")
+    cap = car.get("capture") or {}
+    if cap.get("status") in ("queued", "running", "paused"):
+        raise HTTPException(409, "A 3D model is already being built for this car.")
+    video = cap.get("video")
+    if not video or not store.media_path(video).exists():
+        raise HTTPException(400, "The original video isn’t on file any more. Add a new walk-around instead.")
+    job = jobs.submit("capture", CAPTURE_STEPS, carId=car_id, video=video)
+    store.update_item("cars", car_id, record.start(car, job["id"], video))
+    return job
+
+
 _masks: dict[str, tuple] = {}
 PREVIEW_VERSION = 2  # bump when mod previews change, so cached ones are made again
 
@@ -389,6 +406,29 @@ async def condition_compare(car_id: str, after: UploadFile = File(...), before: 
     cond = car.get("condition") or {}
     store.update_item("cars", car_id, {"condition": {**cond, "comparisons": [record, *(cond.get("comparisons") or [])]}})
     return record
+
+
+@app.post("/api/jobs/{job_id}/continue")
+def job_continue(job_id: str):
+    """Go on with a job that paused to ask you something (build anyway)."""
+    state = jobs.resume(job_id)
+    if state is None:
+        raise HTTPException(404, "Not found")
+    car_id = state.get("carId")
+    if state.get("kind") == "capture" and car_id and store.get_item("cars", car_id):
+        cap = store.get_item("cars", car_id).get("capture") or {}
+        if cap.get("job") == job_id:
+            store.update_item("cars", car_id, {"capture": {**cap, "status": "queued"}})
+    return state
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+def job_cancel(job_id: str):
+    """Stop a job that's paused or still waiting (e.g. to film the car again)."""
+    state = jobs.cancel(job_id, "Stopped so you can film it again.")
+    if state is None:
+        raise HTTPException(404, "Not found")
+    return state
 
 
 @app.get("/api/jobs/{job_id}")

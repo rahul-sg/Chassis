@@ -45,9 +45,9 @@ const STAGES = [
   },
   {
     name: 'Walk-around 360',
-    what: 'A 30–60 second video becomes a photoreal 3D model. The sharpest frames are picked, the car is outlined in each, the camera’s path is worked out, and a Gaussian splat is trained on the car alone, then cleaned up and scaled to real size.',
+    what: 'A 30–60 second video becomes a photoreal 3D model. The sharpest frames are picked (phone HDR video converted to true colour), the car is outlined in each, and the video is checked before the long part: if it looks likely to come out smeared, it asks first. Then the camera’s path is worked out and a Gaussian splat is trained on the car alone, cleaned up, and scaled from the height you filmed at.',
     how: 'ffmpeg · YOLO11 masks · COLMAP (pycolmap) · Brush splat training · clean-up and scaling',
-    figure: 'Test truck: 150 of 150 frames placed, 124,000 splats, about 16 minutes of training on an M1 Pro',
+    figure: 'A Lexus UX filmed on an iPhone measured 4.46 × 1.85 m from the camera height alone; the real car is 4.50 × 1.84 m',
   },
   {
     name: 'One photo → 3D',
@@ -243,6 +243,10 @@ export function About() {
           <li>
             <strong>Goes out:</strong> VINs to NHTSA’s decoder, and make, model and year to NHTSA for recalls and ratings. Models download from
             Hugging Face and GitHub the first time they’re needed.
+          </li>
+          <li>
+            <strong>Links out:</strong> the Kelley Blue Book link just opens their site for your car’s make, model and year; nothing is
+            sent to them or fetched from them by Chassis.
           </li>
           <li>
             <strong>Phone mode</strong> (<code>npm run phone</code>) opens the site to devices on your own Wi-Fi, over this Mac’s own

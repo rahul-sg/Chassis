@@ -8,7 +8,7 @@ Take a photo of a car and get what it is and everything about it. Film a 30-seco
 - **One photo → 3D**: no video? An AI sketch of the shape from a single photo, always labelled as a guess.
 - **Mods**: try paint colours and finishes, wheel colours and window tint on a photo of your car.
 - **Condition**: pin scratches and dents on the 3D model or a photo, compare before and after photos, print a report.
-- **Sell kit**: studio photos with the background swapped, a listing written from the spec data, and a small website with the photos, specs and 3D model to host anywhere.
+- **Sell kit**: studio photos with the background swapped, a listing written from the spec data, and a small website with the photos, specs and 3D model to host anywhere. A link to Kelley Blue Book helps you price it (just a link: nothing is fetched from KBB).
 - **Virtual garage**: every car parked side by side at real size; compare any two.
 
 ## Set up
@@ -48,14 +48,17 @@ flowchart LR
 
 ### The 3D capture pipeline
 
-1. **Frames**: ffmpeg pulls the sharpest frame from each slice of the video (150 frames, 1600 px).
+1. **Frames**: ffmpeg pulls the sharpest frame from each slice of the video (150 frames, 1600 px). Phone HDR video (HLG or PQ, which iPhones film by default) is read at 16 bits and converted to standard colour properly; read naively it comes out flat and dull.
 2. **Masks**: YOLO11 outlines the car in every frame; turntable videos are detected (the background stands still while the car turns).
-3. **Cameras**: COLMAP structure-from-motion places each frame (sequential plus loop-closing pairs), then undistorts frames and masks.
-4. **Training**: Brush trains a Gaussian splat on the masked frames (12,000 steps).
-5. **Clean-up**: splats not on the car in most views are dropped, then everything but the main body, then ground haze.
-6. **Placement**: up is the normal of the camera path; length runs along the car's long axis; scale comes from the length you enter or the typical length for its EPA size class.
+3. **Check**: before the long part, the video is checked: portrait, the car running off the edge of most frames, too small, too short. If it looks likely to come out smeared, the job pauses and asks whether to build anyway or film again.
+4. **Cameras**: COLMAP structure-from-motion places each frame (sequential plus loop-closing pairs), then undistorts frames and masks.
+5. **Training**: Brush trains a Gaussian splat on the masked frames (12,000 steps).
+6. **Clean-up**: a splat stays only if it lands on the car (outlines tightened by 10 px) in most views that see it, and long splats must keep both ends on the car. Then floaters, haze below the car, needle-like streaks and the road go: splats lying flat at floor level, low ones outside the car’s outline seen from above, and pale ones at pavement height. The floor is set at the tyre bottoms.
+7. **Placement**: up is the normal of the camera path; length runs along the car's long axis. Scale comes from the length you enter or, failing that, from the height the video was filmed at (a phone at about chest height, 1.48 m, with the floor known). The typical length for the EPA size class is the last resort, and a rough one: EPA classes go by interior volume.
 
-The test truck (Tanks and Temples "Truck"): 150 of 150 frames placed, 124,000 splats, about 16 minutes of training on an M1 Pro.
+Filming the car again keeps the current model on show until the new one is built (and brings it back if the new video fails). **Rebuild from the same video** re-runs everything on the stored video; `server/.venv/bin/python server/tools/reclean.py CAR_ID` re-runs only the clean-up and scaling (seconds).
+
+The test truck (Tanks and Temples "Truck"): 150 of 150 frames placed, about 16 minutes of training on an M1 Pro. A Lexus UX filmed on an iPhone scaled itself from the camera height to 4.46 × 1.49 × 1.85 m (the real car: 4.50 × 1.54 × 1.84 m).
 
 ## How well it works
 

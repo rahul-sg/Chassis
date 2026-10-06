@@ -151,7 +151,11 @@ function Showroom({ car, cap, readOnly = false }: { car: Car; cap: Capture; read
           </div>
         </dl>
         <div className="muted showroom__scale">
-          {cap.lengthSource === 'you' ? 'Scaled to the length you entered.' : 'Scaled to a typical length for its size class; width and height follow from the 3D model.'}{' '}
+          {cap.lengthSource === 'you'
+            ? 'Scaled to the length you entered.'
+            : cap.lengthSource === 'camera'
+              ? 'Scaled from the height you filmed at (a phone at chest height), so within a few percent.'
+              : 'Scaled to a typical length for its size class, so only roughly.'}{' '}
           {readOnly ? null : editing ? (
             <form
               className="inline-form"
@@ -289,14 +293,18 @@ export function Car360({ car }: { car: Car }) {
       </div>
     );
   // Filmed again: the earlier model stays on show while the new one is built.
-  if (ready(car.previousCapture) && (capture?.status === 'queued' || capture?.status === 'running'))
+  if (ready(car.previousCapture) && (capture?.status === 'queued' || capture?.status === 'running' || capture?.status === 'paused'))
     return (
       <div className="car360">
-        <div className="rebuild">
+        <div className={`rebuild ${capture.status === 'paused' ? 'rebuild--ask' : ''}`}>
           <span className="rebuild__dot" aria-hidden />
-          <p>Building a new 3D model from your new video. Until it’s ready, this is the earlier one.</p>
+          <p>
+            {capture.status === 'paused'
+              ? 'Your new video needs a quick look before the 3D model is built. Until then, this is the earlier one.'
+              : 'Building a new 3D model from your new video. Until it’s ready, this is the earlier one.'}
+          </p>
           <button className="btn btn--sm" onClick={() => go({ page: 'car', id: car.id, tab: 'capture' })}>
-            See progress
+            {capture.status === 'paused' ? 'Take a look' : 'See progress'}
           </button>
         </div>
         <Showroom car={car} cap={car.previousCapture} readOnly />
@@ -335,9 +343,9 @@ export function Car360({ car }: { car: Car }) {
         <section className="capture-cta">
           <div className="capture-cta__copy">
             <p className="eyebrow">Walk-around 360</p>
-            <h2 className="display">{capture.status === 'done' ? '3D model ready' : 'Building the 3D model'}</h2>
+            <h2 className="display">{capture.status === 'paused' ? 'Your video needs a quick look' : 'Building the 3D model'}</h2>
             <button className="btn" onClick={() => go({ page: 'car', id: car.id, tab: 'capture' })}>
-              See progress
+              {capture.status === 'paused' ? 'Take a look' : 'See progress'}
             </button>
           </div>
         </section>

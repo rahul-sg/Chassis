@@ -2867,3 +2867,89 @@ code {
   max-width: 680px;
   margin: 0;
 }
+
+/* A job asking before it goes on */
+.jobask {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  background: rgba(245, 184, 65, 0.05);
+  border: 1px solid rgba(245, 184, 65, 0.3);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+}
+.jobask ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--white);
+}
+.jobask p {
+  margin: 0;
+}
+.jobstep--paused .jobstep__dot {
+  background: var(--warn);
+}
+.jobstep--paused .jobstep__label {
+  color: var(--white);
+}
+
+.rebuild--ask {
+  border-left-color: var(--warn);
+}
+.rebuild--ask .rebuild__dot {
+  background: var(--warn);
+  animation: none;
+}
+.badge--ask {
+  color: #1c1300;
+  background: var(--warn);
+}
+
+.precheck {
+  width: min(560px, 100%);
+  text-align: left;
+}
+
+/* Link out to Kelley Blue Book */
+.kbb {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.kbb a {
+  font-weight: 600;
+  color: var(--white);
+  border-bottom: 1px solid var(--accent);
+}
+.kbb a:hover {
+  color: var(--accent);
+}
+
+.valuebox {
+  display: grid;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.valuebox .field__label {
+  margin: 0;
+}
+.valuebox:not(:has(.kbb)) {
+  display: none;
+}
+
+.capture__rebuild {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+.capture__rebuild .muted {
+  max-width: 560px;
+}

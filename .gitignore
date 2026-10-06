@@ -6,7 +6,7 @@ server/.venv
 # Your cars, photos and captures stay on this computer
 data/
 # Downloaded tools and model weights
-tools/
+/tools/
 *.pt
 *.safetensors
 # Brush writes its GPU tuning cache here while training

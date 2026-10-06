@@ -84,7 +84,8 @@ export interface Hotspot {
 
 /** The 3D model made from a walk-around video. */
 export interface Capture {
-  status: 'queued' | 'running' | 'done' | 'failed';
+  /** paused: the build stopped to ask about the video (see the job's issues). */
+  status: 'queued' | 'running' | 'paused' | 'done' | 'failed';
   job?: string;
   video?: string;
   /** Gaussian splat file, ready for the viewer. */
@@ -93,7 +94,8 @@ export interface Capture {
   hotspots?: Hotspot[];
   /** Car length in metres, used to scale the model. */
   length?: number;
-  lengthSource?: 'size class' | 'you';
+  /** you: entered; camera: from the height the video was filmed at; size class: typical for the class. */
+  lengthSource?: 'size class' | 'camera' | 'you';
   /** 4×4 row-major transform: splat → car on the floor, y up, length along x, metres. */
   transform?: number[];
   /** Length, height, width in metres after the transform. */
@@ -111,7 +113,7 @@ export interface Capture {
 export interface JobStep {
   key: string;
   label: string;
-  status: 'waiting' | 'running' | 'done' | 'failed';
+  status: 'waiting' | 'running' | 'paused' | 'done' | 'failed';
   progress: number;
   detail?: string;
   seconds?: number;
@@ -121,7 +123,9 @@ export interface JobStep {
 export interface Job {
   id: string;
   kind: string;
-  status: 'queued' | 'running' | 'done' | 'failed';
+  status: 'queued' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
+  /** Why a paused job is asking before it goes on. */
+  issues?: string[] | null;
   steps: JobStep[];
   error: string | null;
   createdAt: number;

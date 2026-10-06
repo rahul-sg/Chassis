@@ -12,7 +12,7 @@ import cv2
 
 from .. import jobs, store
 from ..paths import MEDIA, ROOT
-from . import clean, frames, masks, record, train
+from . import check, clean, frames, masks, record, train
 from .steps import STEPS  # noqa: F401
 
 TRAIN_STEPS = 12000
@@ -76,11 +76,20 @@ def run(state: dict) -> dict:
     else:
         p = step("masks")
         st = masks.car_masks(shots, work / "masks", progress=p)
-        if st["withCar"] < 0.6 * st["frames"]:
+        if st["withCar"] < 0.3 * st["frames"]:
             raise RuntimeError(f"The car was only found in {st['withCar']} of {st['frames']} frames. Keep the whole car in view.")
         tt = masks.turntable(shots, work / "masks")
         (work / "masks.json").write_text(json.dumps({**st, "turntable": tt}))
         jobs.set_step(job, "masks", "done", detail=f"Car in {st['withCar']} of {st['frames']} frames" + (" · turntable" if tt else ""))
+
+    # Before the long part: is this video likely to make a good model? If not, ask first.
+    if "check" not in done and any(s["key"] == "check" for s in state["steps"]):
+        jobs.set_step(job, "check", "running")
+        issues, framing = check.review(frames.probe(video), work / "masks")
+        if issues and not state.get("confirmed"):
+            _set_capture(car_id, status="paused")
+            raise jobs.Paused(issues)
+        jobs.set_step(job, "check", "done", detail="Looks good" if not issues else "Building anyway, as you chose")
 
     best = {"registered": 0, "total": len(shots)}
     prior = json.loads((work / "sfm.json").read_text()) if (work / "sfm.json").exists() else {}
@@ -126,7 +135,9 @@ def run(state: dict) -> dict:
     length, source = _car_length(car)
     out = MEDIA / "captures" / job
     out.mkdir(parents=True, exist_ok=True)
-    info = clean.clean(ply, dataset / "sparse" / "txt", dataset / "masks", out / "car.ply", length)
+    info = clean.clean(ply, dataset / "sparse" / "txt", dataset / "masks", out / "car.ply", length,
+                       length_known=source == "you")
+    length, source = info["size"][0], info["lengthSource"]
     # Poster: the frame where the car is largest.
     best_frame = max(shots, key=lambda f: (cv2.imread(str(work / "masks" / f.name), cv2.IMREAD_GRAYSCALE) > 127).mean())
     shutil.copy(best_frame, out / "poster.jpg")
@@ -143,9 +154,4 @@ def run(state: dict) -> dict:
     return result
 
 
-def failed(state: dict) -> None:
-    record.failed(state["carId"], state["id"], state.get("error"))
-
-
-jobs.RUNNERS["capture"] = run
-jobs.RUNNERS["capture:failed"] = failed
+jobs.RUNNERS["capture"] = run  # its failure hook is registered in record.py

@@ -38,3 +38,36 @@ def test_jobs_left_running_are_marked_interrupted():
     s = jobs.read(state["id"])
     assert s["status"] == "failed" and "closed" in s["error"]
     assert s["steps"][0]["status"] == "failed"
+
+
+def test_a_job_can_pause_to_ask_then_go_on_or_stop():
+    _isolated()
+    state = jobs.submit("ask", [("a", "First"), ("b", "Check"), ("c", "Long part")])
+    seen = []
+
+    def runner(s):
+        jobs.set_step(s["id"], "a", "done")
+        jobs.set_step(s["id"], "b", "running")
+        if not s.get("confirmed"):
+            raise jobs.Paused(["It’s portrait."])
+        jobs.set_step(s["id"], "b", "done")
+        jobs.set_step(s["id"], "c", "done")
+        return {"ok": True}
+
+    jobs.RUNNERS["ask"] = runner
+    jobs.RUNNERS["ask:failed"] = lambda s: seen.append(s["status"])
+    jobs.run_one(state["id"])
+    s = jobs.read(state["id"])
+    assert s["status"] == "paused" and s["issues"] == ["It’s portrait."]
+    assert [st["status"] for st in s["steps"]] == ["done", "paused", "waiting"]
+    assert jobs.next_queued() is None  # a paused job waits for you
+
+    jobs.resume(state["id"])
+    assert jobs.next_queued() == state["id"]
+    jobs.run_one(state["id"])
+    assert jobs.read(state["id"])["status"] == "done"
+
+    other = jobs.submit("ask", [("a", "First"), ("b", "Check")])
+    jobs.run_one(other["id"])
+    s = jobs.cancel(other["id"], "Stopped so you can film it again.")
+    assert s["status"] == "cancelled" and seen == ["cancelled"]

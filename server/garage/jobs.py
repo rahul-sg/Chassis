@@ -90,6 +90,45 @@ def retry(job_id: str) -> dict | None:
         return write(state)
 
 
+class Paused(Exception):
+    """Raised by a job that needs you before going on (e.g. a video that looks likely to fail)."""
+
+    def __init__(self, issues: list[str]):
+        super().__init__("; ".join(issues))
+        self.issues = issues
+
+
+def resume(job_id: str) -> dict | None:
+    """Go on with a paused job: what it asked about is confirmed, finished steps are kept."""
+    with _lock:
+        state = read(job_id)
+        if not state or state["status"] != "paused":
+            return state
+        for st in state["steps"]:
+            if st["status"] == "paused":
+                st.update(status="waiting", progress=0.0)
+                st.pop("startedAt", None)
+        state.update(status="queued", confirmed=True, issues=None)
+        return write(state)
+
+
+def cancel(job_id: str, reason: str) -> dict | None:
+    """Stop a paused or waiting job. Its failure hook runs, as for a job that failed."""
+    with _lock:
+        state = read(job_id)
+        if not state or state["status"] not in ("paused", "queued"):
+            return state
+        for st in state["steps"]:
+            if st["status"] in ("paused", "running"):
+                st["status"] = "failed"
+        state.update(status="cancelled", error=reason, finishedAt=round(time.time(), 2))
+        write(state)
+    hook = RUNNERS.get(f"{state['kind']}:failed")
+    if hook:
+        hook(state)
+    return state
+
+
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -108,6 +147,13 @@ def run_one(job_id: str) -> None:
     try:
         result = RUNNERS[state["kind"]](state)
         update(job_id, status="done", result=result, finishedAt=round(time.time(), 2))
+    except Paused as p:
+        paused = read(job_id)
+        for st in paused["steps"]:
+            if st["status"] == "running":
+                st["status"] = "paused"
+        paused.update(status="paused", issues=p.issues)
+        write(paused)
     except Exception as e:  # the job's own message is meant for people; keep the trace in the log
         (folder(job_id) / "error.log").write_text(traceback.format_exc())
         _fail(read(job_id), str(e))
