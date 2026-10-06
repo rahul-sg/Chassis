@@ -2953,3 +2953,16 @@ code {
 .capture__rebuild .muted {
   max-width: 560px;
 }
+
+@media (max-width: 640px) {
+  .baylabel {
+    min-width: 0;
+    padding: 5px 8px;
+  }
+  .baylabel strong {
+    font-size: 12px;
+  }
+  .baylabel span {
+    display: none;
+  }
+}

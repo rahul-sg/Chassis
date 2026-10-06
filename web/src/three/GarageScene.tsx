@@ -7,6 +7,7 @@ import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { carName } from '../lib/store';
 import type { Identity } from '../lib/types';
 import { CAR, carPoints } from './carShape';
+import { GarageRoom } from './GarageRoom';
 
 /** One car as the garage needs it (GET /api/garage/scene). Sizes are metres, [length, width, height]. */
 export interface SceneCar {
@@ -164,18 +165,14 @@ function Bay({
   return (
     <group position={[bay.x, 0, 0]}>
       {/* Floor of the bay, lit up on hover or when picked to compare. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} renderOrder={-1}>
         <planeGeometry args={[bay.width - 0.16, depth]} />
         <meshBasicMaterial color={picked ? '#ff6a1f' : '#ffffff'} transparent opacity={picked ? 0.1 : hot ? 0.04 : 0} depthWrite={false} toneMapped={false} />
       </mesh>
-      {/* A pool of light from above, and the car's soft shadow in it. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, bay.z]} scale={[bay.width * 1.1, L * 1.5, 1]}>
+      {/* The car's soft shadow on the floor. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, bay.z]} scale={[W * 1.3, L * 1.15, 1]} renderOrder={-1}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial map={radial} color="#ffffff" transparent opacity={0.14} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, bay.z]} scale={[W * 1.25, L * 1.15, 1]}>
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial map={radial} color="#000000" transparent opacity={0.8} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial map={radial} color="#000000" transparent opacity={0.72} depthWrite={false} toneMapped={false} />
       </mesh>
       <group position={[0, 0, bay.z]} rotation={[0, -Math.PI / 2, 0]}>
         {scanned ? <ScannedCar url={car.splat!} matrix={car.transform!} front={car.front} /> : <StandIn size={car.size} color={car.color} />}
@@ -196,7 +193,7 @@ function Bay({
         <boxGeometry args={[W, H, L]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <Html position={[0, 0.01, bay.z + L / 2 + 0.55]} center zIndexRange={[10, 0]}>
+      <Html position={[0, H + 0.32, bay.z]} center zIndexRange={[10, 0]}>
         <button className={`baylabel ${hot ? 'is-hot' : ''} ${picked ? 'is-picked' : ''}`} onClick={onPick} onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
           <strong>{label(car)}</strong>
           <span>
@@ -208,47 +205,18 @@ function Bay({
   );
 }
 
-function Lines({ total, depth, bays }: { total: number; depth: number; bays: ReturnType<typeof layout>['bays'] }) {
-  const xs = [-total / 2, ...bays.map((b) => b.x + b.width / 2)];
-  return (
-    <group>
-      {xs.map((x, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.003, 0]}>
-          <planeGeometry args={[0.08, depth]} />
-          <meshBasicMaterial color="#34343c" toneMapped={false} />
-        </mesh>
-      ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, -depth / 2]}>
-        <planeGeometry args={[total + 0.08, 0.08]} />
-        <meshBasicMaterial color="#34343c" toneMapped={false} />
-      </mesh>
-      {/* Back wall. */}
-      <mesh position={[0, 1.6, -depth / 2 - 0.6]}>
-        <planeGeometry args={[total + 120, 3.2]} />
-        <meshBasicMaterial color="#131317" toneMapped={false} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[total + 40, depth + 40]} />
-        <meshBasicMaterial color="#0e0e11" toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
-function Rig({ total, depth, resetKey }: { total: number; depth: number; resetKey: number }) {
+/** Standing in the garage at eye level, far enough back to see the whole row. */
+function Rig({ total, resetKey }: { total: number; resetKey: number }) {
   const camera = useThree((s) => s.camera as THREE.PerspectiveCamera);
   const controls = useThree((s) => s.controls) as unknown as OrbitImpl | null;
   const size = useThree((s) => s.size);
   useEffect(() => {
-    // Far enough back to fit the row across the view, a little above eye height.
-    const fov = THREE.MathUtils.degToRad(camera.fov);
-    const aspect = size.width / size.height;
-    const fit = (total + 2) / 2 / Math.tan(fov / 2) / aspect;
-    const dist = Math.max(9, fit * 1.05, depth * 1.5);
-    camera.position.set(total * 0.12, dist * 0.42, depth / 2 + dist * 0.9);
-    controls?.target.set(0, 0.7, 0);
+    const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * (size.width / size.height));
+    const d = Math.max(6.5, (total / 2 + 0.9) / Math.tan(half));
+    camera.position.set(Math.min(1.4, total * 0.12), 1.75, -0.3 + d);
+    controls?.target.set(0, 0.92, -0.3);
     controls?.update();
-  }, [camera, controls, total, depth, size.width, size.height, resetKey]);
+  }, [camera, controls, total, size.width, size.height, resetKey]);
   return null;
 }
 
@@ -275,10 +243,9 @@ export function GarageScene({
   return (
     <div className="viewer viewer--garage">
       <Canvas camera={{ fov: 34, near: 0.1, far: 400 }} gl={{ antialias: false }} dpr={[1, 2]}>
-        <color attach="background" args={['#0a0a0c']} />
-        <fog attach="fog" args={['#0a0a0c', total + depth + 10, total + depth + 40]} />
+        <color attach="background" args={['#050506']} />
         <Spark />
-        <Lines total={total} depth={depth} bays={bays} />
+        <GarageRoom bays={bays} total={total} depth={depth} front={depth / 2 + 7} />
         {bays.map((b) => (
           <Bay
             key={b.car.id}
@@ -291,8 +258,8 @@ export function GarageScene({
             onPick={() => onPick(b.car.id)}
           />
         ))}
-        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2 - 0.06} minDistance={3} maxDistance={total + depth + 30} />
-        <Rig total={total} depth={depth} resetKey={resetKey} />
+        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2.5} maxDistance={total + depth + 12} />
+        <Rig total={total} resetKey={resetKey} />
       </Canvas>
       <div className="viewer__tools">
         <button className="btn btn--sm" onClick={() => setResetKey((k) => k + 1)}>
