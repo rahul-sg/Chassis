@@ -2460,6 +2460,11 @@ code {
 .viewer--garage {
   height: min(70vh, 640px);
 }
+@media (max-width: 640px) {
+  .viewer--garage {
+    height: 460px;
+  }
+}
 .viewer--wait {
   display: grid;
   place-items: center;

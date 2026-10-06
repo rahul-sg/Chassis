@@ -1,31 +1,42 @@
+import { MeshReflectorMaterial } from '@react-three/drei';
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { GarageWalls } from './GarageWalls';
 
 RectAreaLightUniformsLib.init();
 
 /**
- * The garage the cars park in: polished concrete with saw-cut joints, painted bay lines and
- * wheel stops, slate walls with a roll-up door behind each bay, and LED strips over the bays
- * that light the room (the floor's sheen is their reflection). Every texture is drawn here,
- * so there are no image files to download or license.
+ * The garage the cars park in, done like a collector's garage or detailing studio: a dark
+ * glossy epoxy floor that reflects the room and its lights, a hexagon LED grid overhead, walnut
+ * slat walls with warm cove lighting along the base (and a workshop, wheels and a charger on them:
+ * GarageWalls), and flush aluminium doors with frosted glass.
+ * Every texture is drawn here, so there are no image files to download or license.
+ *
+ * The floor's reflections are real: the scene is drawn again from a mirrored camera, blurred
+ * the way a glossy (not mirror) finish blurs it, and mixed into the epoxy.
  */
 
 export const ROOM_HEIGHT = 3.2;
-const JOINT = 3; // m between saw-cut joints in the slab
+export const ROOM_SIDE = 1.6; // m between the outer bays and the side walls, for what's on the walls
+const HEX = 0.42; // m, side of one hexagon in the ceiling grid
+const TUBE = 0.035; // m, width of an LED tube
+// The reflector multiplies the reflection by the floor's colour, so the near-black epoxy texture is
+// lifted here; with mirror near 1 the floor is then dark where it reflects dark, bright where it reflects light.
+const FLOOR_GAIN = new THREE.Color(3, 3, 3);
 
-function canvas(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void) {
+function canvas(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, srgb = true) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
   draw(c.getContext('2d')!);
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
 }
 
-/** A repeatable random generator, so the floor looks the same every visit. */
+/** A repeatable random generator, so the room looks the same every visit. */
 function rng(seed: number) {
   return () => {
     seed = (seed * 16807) % 2147483647;
@@ -33,107 +44,147 @@ function rng(seed: number) {
   };
 }
 
-/** One 3 × 3 m tile of polished concrete: cloudy trowel marks, fine aggregate, joints on two edges. */
-function concrete() {
+/** Dark epoxy with a fine metallic flake. */
+function epoxy() {
   return canvas(1024, 1024, (g) => {
-    const r = rng(7);
-    g.fillStyle = '#5c5d60';
+    const r = rng(5);
+    g.fillStyle = '#1c1d21';
     g.fillRect(0, 0, 1024, 1024);
-    for (let i = 0; i < 900; i++) {
-      const x = r() * 1024;
-      const y = r() * 1024;
-      const rad = 30 + r() * 160;
-      const v = 70 + r() * 40;
-      const grad = g.createRadialGradient(x, y, 0, x, y, rad);
-      grad.addColorStop(0, `rgba(${v},${v},${v + 3},0.07)`);
-      grad.addColorStop(1, `rgba(${v},${v},${v + 3},0)`);
-      g.fillStyle = grad;
-      g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    for (let i = 0; i < 26000; i++) {
+      const v = r();
+      g.fillStyle = v > 0.6 ? `rgba(150,152,160,${0.15 + r() * 0.25})` : `rgba(8,8,10,${0.2 + r() * 0.3})`;
+      g.fillRect(r() * 1024, r() * 1024, 1 + r() * 1.6, 1 + r() * 1.6);
     }
-    const img = g.getImageData(0, 0, 1024, 1024);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const n = (r() - 0.5) * 14;
-      img.data[i] += n;
-      img.data[i + 1] += n;
-      img.data[i + 2] += n;
-    }
-    g.putImageData(img, 0, 0);
-    g.fillStyle = 'rgba(20,20,22,0.85)';
-    g.fillRect(0, 0, 1024, 3);
-    g.fillRect(0, 0, 3, 1024);
   });
 }
 
-function wall() {
+/** Large-format charcoal wall panels with fine reveals. */
+function panels() {
   return canvas(512, 512, (g) => {
-    const r = rng(11);
-    g.fillStyle = '#2c2e33';
+    g.fillStyle = '#212226';
     g.fillRect(0, 0, 512, 512);
-    // Lower band (about a metre of the 3.2 m wall), darker and harder-wearing, with a trim line.
-    g.fillStyle = '#1f2024';
-    g.fillRect(0, 512 * (1 - 1 / ROOM_HEIGHT), 512, 512);
-    g.fillStyle = '#3a3c42';
-    g.fillRect(0, 512 * (1 - 1 / ROOM_HEIGHT) - 3, 512, 3);
-    const img = g.getImageData(0, 0, 512, 512);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const n = (r() - 0.5) * 6;
-      img.data[i] += n;
-      img.data[i + 1] += n;
-      img.data[i + 2] += n;
-    }
-    g.putImageData(img, 0, 0);
+    g.fillStyle = '#121316';
+    g.fillRect(0, 0, 512, 3);
+    g.fillRect(0, 0, 3, 512);
   });
 }
 
-/** A roll-up door: ribbed steel slats, a rubber seal along the bottom. */
-function door() {
+/** A flush modern door: dark aluminium frame, frosted glass panels (4 × 4). */
+function doorColour() {
   return canvas(512, 512, (g) => {
-    for (let y = 0; y < 512; y += 16) {
-      const grad = g.createLinearGradient(0, y, 0, y + 16);
-      grad.addColorStop(0, '#8e9196');
-      grad.addColorStop(0.45, '#a9acb1');
-      grad.addColorStop(0.85, '#7c7f84');
-      grad.addColorStop(1, '#55585c');
-      g.fillStyle = grad;
-      g.fillRect(0, y, 512, 16);
-    }
-    g.fillStyle = '#16171a';
-    g.fillRect(0, 498, 512, 14);
+    g.fillStyle = '#17181b';
+    g.fillRect(0, 0, 512, 512);
+    const m = 14;
+    const cell = (512 - m) / 4;
+    for (let i = 0; i < 4; i++)
+      for (let j = 0; j < 4; j++) {
+        const x = m + i * cell;
+        const y = m + j * cell;
+        const grad = g.createLinearGradient(0, y, 0, y + cell);
+        grad.addColorStop(0, '#9ea6b2');
+        grad.addColorStop(1, '#7c8490');
+        g.fillStyle = grad;
+        g.fillRect(x, y, cell - m, cell - m);
+      }
   });
 }
-
-/** A painted line, a little worn. */
-function paint() {
-  return canvas(64, 512, (g) => {
-    const r = rng(3);
-    g.fillStyle = '#d8a93a';
-    g.fillRect(0, 0, 64, 512);
-    for (let i = 0; i < 260; i++) {
-      g.fillStyle = `rgba(0,0,0,${0.15 + r() * 0.35})`;
-      g.clearRect(r() * 64, r() * 512, 1 + r() * 3, 1 + r() * 4);
-    }
-  });
+function doorGlow() {
+  return canvas(
+    512,
+    512,
+    (g) => {
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, 512, 512);
+      const m = 14;
+      const cell = (512 - m) / 4;
+      for (let i = 0; i < 4; i++)
+        for (let j = 0; j < 4; j++) {
+          g.fillStyle = `rgb(${120 - j * 18},${130 - j * 18},${150 - j * 18})`;
+          g.fillRect(m + i * cell, m + j * cell, cell - m, cell - m);
+        }
+    },
+    false,
+  );
 }
 
-/** Rubber wheel stop with yellow reflective stripes. */
-function stopper() {
-  return canvas(256, 32, (g) => {
-    g.fillStyle = '#1b1b1d';
-    g.fillRect(0, 0, 256, 32);
-    g.fillStyle = '#d8a93a';
-    for (const x of [28, 108, 188]) g.fillRect(x, 0, 40, 32);
-  });
-}
-
-/** "BAY 01", stencilled on the wall above a door. */
-function stencil(n: number) {
-  return canvas(512, 128, (g) => {
-    g.fillStyle = 'rgba(232,232,226,0.82)';
-    g.font = `700 88px 'Archivo Variable', 'Arial Narrow', Arial, sans-serif`;
+/** Small brushed numbers for each bay. */
+function bayNumber(n: number) {
+  return canvas(256, 128, (g) => {
+    g.fillStyle = 'rgba(214,216,222,0.9)';
+    g.font = `500 72px 'JetBrains Mono Variable', ui-monospace, monospace`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(`BAY ${String(n).padStart(2, '0')}`, 256, 68);
+    g.fillText(String(n).padStart(2, '0'), 128, 66);
   });
+}
+
+/** The edges of a hexagon grid covering a rectangle (x0..x1 by z0..z1), as segments. */
+function hexEdges(x0: number, x1: number, z0: number, z1: number) {
+  const w = Math.sqrt(3) * HEX; // pointy-top hexagons
+  const h = 1.5 * HEX;
+  const segs: [THREE.Vector2, THREE.Vector2][] = [];
+  const seen = new Set<string>();
+  const key = (a: THREE.Vector2, b: THREE.Vector2) => {
+    const k1 = `${a.x.toFixed(3)},${a.y.toFixed(3)}`;
+    const k2 = `${b.x.toFixed(3)},${b.y.toFixed(3)}`;
+    return k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+  };
+  const inside = (p: THREE.Vector2) => p.x >= x0 && p.x <= x1 && p.y >= z0 && p.y <= z1;
+  for (let row = 0; z0 + row * h <= z1 + h; row++) {
+    for (let col = 0; x0 + col * w <= x1 + w; col++) {
+      const cx = x0 + col * w + (row % 2 ? w / 2 : 0);
+      const cz = z0 + row * h;
+      const corners = Array.from({ length: 6 }, (_, k) => {
+        const a = (Math.PI / 3) * k + Math.PI / 6;
+        return new THREE.Vector2(cx + HEX * Math.cos(a), cz + HEX * Math.sin(a));
+      });
+      for (let k = 0; k < 6; k++) {
+        const a = corners[k];
+        const b = corners[(k + 1) % 6];
+        if (!inside(a) || !inside(b)) continue;
+        const kk = key(a, b);
+        if (seen.has(kk)) continue;
+        seen.add(kk);
+        segs.push([a, b]);
+      }
+    }
+  }
+  // The frame around the grid.
+  const c = [new THREE.Vector2(x0, z0), new THREE.Vector2(x1, z0), new THREE.Vector2(x1, z1), new THREE.Vector2(x0, z1)];
+  for (let k = 0; k < 4; k++) segs.push([c[k], c[(k + 1) % 4]]);
+  return segs;
+}
+
+/** LED tubes along the given segments at height y, as one instanced mesh. */
+function Tubes({
+  segs,
+  y,
+  material,
+  renderOrder = 0,
+}: {
+  segs: [THREE.Vector2, THREE.Vector2][];
+  y: number;
+  material: THREE.Material;
+  renderOrder?: number;
+}) {
+  const mesh = useMemo(() => {
+    const geo = new THREE.BoxGeometry(1, 0.03, TUBE);
+    const m = new THREE.InstancedMesh(geo, material, segs.length);
+    const o = new THREE.Object3D();
+    segs.forEach(([a, b], i) => {
+      const len = a.distanceTo(b);
+      o.position.set((a.x + b.x) / 2, y, (a.y + b.y) / 2);
+      o.rotation.set(0, -Math.atan2(b.y - a.y, b.x - a.x), 0);
+      o.scale.set(len + TUBE, 1, 1);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+    m.renderOrder = renderOrder;
+    return m;
+  }, [segs, y, material, renderOrder]);
+  useEffect(() => () => mesh.geometry.dispose(), [mesh]);
+  return <primitive object={mesh} />;
 }
 
 export interface RoomBay {
@@ -153,27 +204,22 @@ export function GarageRoom({
   /** z of the open front (where the camera stands inside). */
   front: number;
 }) {
-  const width = total + 2.4;
+  const width = total + 2 * ROOM_SIDE;
   const back = -depth / 2 - 0.5;
   const length = front - back;
   const tex = useMemo(() => {
-    const floor = concrete();
+    const floor = epoxy();
     floor.wrapS = floor.wrapT = THREE.RepeatWrapping;
-    floor.repeat.set(width / JOINT, length / JOINT);
-    const walls = (span: number) => {
-      const t = wall();
-      t.wrapS = THREE.RepeatWrapping;
-      t.repeat.set(span / ROOM_HEIGHT, 1);
-      return t;
-    };
+    floor.repeat.set(width / 2.5, length / 2.5);
+    const backPanels = panels();
+    backPanels.wrapS = backPanels.wrapT = THREE.RepeatWrapping;
+    backPanels.repeat.set(width / 1.2, ROOM_HEIGHT / 1.2);
     return {
       floor,
-      backWall: walls(width),
-      sideWall: walls(length),
-      door: door(),
-      paint: paint(),
-      stopper: stopper(),
-      numbers: bays.map((_, i) => stencil(i + 1)),
+      backPanels,
+      door: doorColour(),
+      glow: doorGlow(),
+      numbers: bays.map((_, i) => bayNumber(i + 1)),
     };
   }, [width, length, bays]);
   useEffect(
@@ -184,63 +230,54 @@ export function GarageRoom({
     },
     [tex],
   );
+  // The hex grid spans the bays, back to front.
+  const grid = useMemo(() => hexEdges(-total / 2 + 0.2, total / 2 - 0.2, back + 0.7, depth / 2 + 0.4), [total, back, depth]);
+  const ledMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#f4f7ff', toneMapped: false }), []);
+  useEffect(() => () => ledMat.dispose(), [ledMat]);
   const lines = [-total / 2, ...bays.map((b) => b.x + b.width / 2)];
-  const stopZ = -depth / 2 + 0.75;
 
   return (
     <group>
-      {/* Light: a little bounce from the walls, a warm fill from the open front, an overhead
-          light over each car (the floor's sheen), and a light bar above each door. */}
-      <hemisphereLight args={['#d4d8e0', '#3a3a3e', 1.1]} />
-      <pointLight position={[0, 2.4, front - 1]} intensity={6} distance={18} decay={1.4} color="#ffe9cf" />
-      {bays.map((b, i) => {
-        const bar = Math.min(b.width - 0.5, 2.7);
-        return (
-          <group key={i}>
-            <rectAreaLight
-              args={['#fff4e6', 60, 0.22, Math.min(depth * 0.7, 3.6)]}
-              position={[b.x, ROOM_HEIGHT - 0.02, -0.4]}
-              rotation={[-Math.PI / 2, 0, 0]}
-            />
-            <group position={[b.x, 3.0, back + 0.14]}>
-              <rectAreaLight args={['#fff4e6', 45, bar, 0.12]} rotation={[-Math.PI / 2 - 0.5, 0, 0]} />
-              <mesh>
-                <boxGeometry args={[bar, 0.05, 0.1]} />
-                <meshStandardMaterial color="#26282d" roughness={0.6} metalness={0.4} />
-              </mesh>
-              <mesh position={[0, -0.028, 0.01]}>
-                <boxGeometry args={[bar - 0.04, 0.008, 0.07]} />
-                <meshBasicMaterial color="#fffaf2" toneMapped={false} />
-              </mesh>
-            </group>
-          </group>
-        );
-      })}
-
-      {/* Floor: polished concrete. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (front + back) / 2]} receiveShadow>
-        <planeGeometry args={[width, length]} />
-        <meshStandardMaterial map={tex.floor} roughness={0.24} metalness={0.05} />
-      </mesh>
-      {/* Bay lines, and the line along the back. */}
-      {lines.map((x, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.002, 0]}>
-          <planeGeometry args={[0.1, depth]} />
-          <meshStandardMaterial map={tex.paint} roughness={0.55} alphaTest={0.5} />
-        </mesh>
-      ))}
-      {/* Wheel stops behind each bay's rear tyres. */}
+      {/* Light: the hex grid (an area light over each bay), soft bounce, warm cove light on the walls. */}
+      <hemisphereLight args={['#dfe4ee', '#2c2c30', 0.9]} />
       {bays.map((b, i) => (
-        <mesh key={i} position={[b.x, 0.06, stopZ]}>
-          <boxGeometry args={[Math.min(1.6, b.width - 0.8), 0.12, 0.16]} />
-          <meshStandardMaterial map={tex.stopper} roughness={0.8} />
+        <rectAreaLight
+          key={i}
+          args={['#f2f6ff', 9, Math.min(b.width, 3), Math.min(depth, 5.5)]}
+          position={[b.x, ROOM_HEIGHT - 0.04, -0.2]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        />
+      ))}
+      <pointLight position={[0, ROOM_HEIGHT - 0.25, front - 1.5]} intensity={1.3} distance={14} decay={1.6} color="#ffe6c8" />
+      <Tubes segs={grid} y={ROOM_HEIGHT - 0.03} material={ledMat} />
+
+      {/* Floor: dark glossy epoxy, reflecting the cars and the lights. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (front + back) / 2]}>
+        <planeGeometry args={[width, length]} />
+        <MeshReflectorMaterial
+          map={tex.floor}
+          color={FLOOR_GAIN}
+          mirror={0.97}
+          mixStrength={1.6}
+          mixBlur={0.5}
+          blur={[120, 40]}
+          resolution={1024}
+          roughness={1}
+          metalness={0}
+        />
+      </mesh>
+      {/* Bay markers: thin inlaid lines. */}
+      {lines.map((x, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.003, 0]}>
+          <planeGeometry args={[0.035, depth]} />
+          <meshStandardMaterial color="#6b6f78" roughness={0.3} metalness={0.6} />
         </mesh>
       ))}
 
-      {/* Walls: back (with a door per bay), sides, and the front around the open door. */}
+      {/* Back wall: charcoal panels, a flush frosted-glass door per bay with a slim light above. */}
       <mesh position={[0, ROOM_HEIGHT / 2, back]}>
         <planeGeometry args={[width, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={tex.backWall} roughness={0.92} />
+        <meshStandardMaterial map={tex.backPanels} roughness={0.7} metalness={0.15} />
       </mesh>
       {bays.map((b, i) => {
         const w = Math.min(b.width - 0.5, 2.7);
@@ -248,36 +285,42 @@ export function GarageRoom({
           <group key={i} position={[b.x, 0, back + 0.02]}>
             <mesh position={[0, 1.15, 0]}>
               <planeGeometry args={[w, 2.3]} />
-              <meshStandardMaterial map={tex.door} roughness={0.5} metalness={0.45} />
+              <meshStandardMaterial
+                map={tex.door}
+                emissiveMap={tex.glow}
+                emissive="#ffffff"
+                emissiveIntensity={0.55}
+                roughness={0.25}
+                metalness={0.4}
+              />
             </mesh>
-            {/* Frame */}
-            <mesh position={[0, 2.33, 0.01]}>
-              <boxGeometry args={[w + 0.16, 0.08, 0.04]} />
-              <meshStandardMaterial color="#141518" roughness={0.6} />
+            <mesh position={[0, 2.4, 0.04]}>
+              <boxGeometry args={[w, 0.03, 0.06]} />
+              <meshBasicMaterial color="#fff6ea" toneMapped={false} />
             </mesh>
-            {[-1, 1].map((s) => (
-              <mesh key={s} position={[s * (w / 2 + 0.04), 1.17, 0.01]}>
-                <boxGeometry args={[0.08, 2.34, 0.04]} />
-                <meshStandardMaterial color="#141518" roughness={0.6} />
-              </mesh>
-            ))}
-            <mesh position={[0, 2.62, 0.01]}>
-              <planeGeometry args={[1.2, 0.3]} />
-              <meshStandardMaterial map={tex.numbers[i]} alphaTest={0.3} roughness={0.9} />
+            <mesh position={[0, 2.68, 0.01]}>
+              <planeGeometry args={[0.5, 0.25]} />
+              <meshStandardMaterial map={tex.numbers[i]} alphaTest={0.3} roughness={0.4} metalness={0.5} />
             </mesh>
           </group>
         );
       })}
+
+      {/* Side walls: walnut slats and what's mounted on them (GarageWalls), a warm cove light along the floor. */}
+      <GarageWalls width={width} back={back} front={front} />
       {[-1, 1].map((s) => (
-        <mesh key={s} position={[(s * width) / 2, ROOM_HEIGHT / 2, (front + back) / 2]} rotation={[0, -s * (Math.PI / 2), 0]}>
-          <planeGeometry args={[length, ROOM_HEIGHT]} />
-          <meshStandardMaterial map={tex.sideWall} roughness={0.92} />
-        </mesh>
+        <group key={s}>
+          <mesh position={[(s * width) / 2 - s * 0.03, 0.06, (front + back) / 2]}>
+            <boxGeometry args={[0.02, 0.025, length]} />
+            <meshBasicMaterial color="#ffb877" toneMapped={false} />
+          </mesh>
+          <pointLight position={[(s * width) / 2 - s * 0.4, 0.3, back / 2]} intensity={2.2} distance={4} decay={2} color="#ffb877" />
+        </group>
       ))}
       {/* Ceiling, facing down. */}
       <mesh position={[0, ROOM_HEIGHT, (front + back) / 2]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[width, length]} />
-        <meshStandardMaterial color="#1c1d21" roughness={1} />
+        <meshStandardMaterial color="#141518" roughness={1} />
       </mesh>
     </group>
   );

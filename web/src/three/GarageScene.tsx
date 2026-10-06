@@ -7,7 +7,7 @@ import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { carName } from '../lib/store';
 import type { Identity } from '../lib/types';
 import { CAR, carPoints } from './carShape';
-import { GarageRoom } from './GarageRoom';
+import { GarageRoom, ROOM_SIDE, type RoomBay } from './GarageRoom';
 
 /** One car as the garage needs it (GET /api/garage/scene). Sizes are metres, [length, width, height]. */
 export interface SceneCar {
@@ -43,16 +43,35 @@ function layout(cars: SceneCar[]) {
   return { bays, total, depth };
 }
 
+const ZOOM_OUT = 1.15; // how much further back than the starting view you can pull
+
+/**
+ * Two splat renderers: one for the main camera and one for the floor's reflection camera. Spark
+ * sorts the splats back to front for the camera that draws them, and one shared order would show
+ * the far side of each car through the near side in one of the two views. Each renderer is shown
+ * only to its own camera.
+ */
 function Spark() {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
   useEffect(() => {
-    const spark = new SparkRenderer({ renderer: gl });
-    scene.add(spark);
-    return () => {
-      scene.remove(spark);
+    const main = new SparkRenderer({ renderer: gl });
+    const mirrored = new SparkRenderer({ renderer: gl });
+    scene.add(main, mirrored);
+    const before = scene.onBeforeRender;
+    scene.onBeforeRender = function (this: THREE.Scene, ...args) {
+      main.visible = args[2] === camera;
+      mirrored.visible = args[2] !== camera;
+      before.apply(this, args);
     };
-  }, [gl, scene]);
+    return () => {
+      scene.onBeforeRender = before;
+      scene.remove(main, mirrored);
+      main.dispose();
+      mirrored.dispose();
+    };
+  }, [gl, scene, camera]);
   return null;
 }
 
@@ -90,6 +109,7 @@ const standVertex = /* glsl */ `
   attribute float kind;
   uniform vec3 uPaint;
   uniform float uSize;
+  uniform float uFade;
   varying vec3 vColor;
   varying float vAlpha;
   void main() {
@@ -100,7 +120,7 @@ const standVertex = /* glsl */ `
     else if (kind == 3.0) { c = vec3(0.78, 0.79, 0.82); }
     else if (kind == 4.0) { c = vec3(1.0); a = 1.0; }
     else if (kind == 5.0) { c = vec3(0.95, 0.18, 0.12); a = 1.0; }
-    vColor = c; vAlpha = a;
+    vColor = c; vAlpha = a * uFade;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_PointSize = uSize / -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -117,7 +137,7 @@ const standFragment = /* glsl */ `
 `;
 
 /** A car without a scan: the generic point-cloud body in its paint colour, stretched to its class's size. */
-function StandIn({ size, color }: { size: [number, number, number]; color?: string }) {
+function StandIn({ size, color, fade = 1 }: { size: [number, number, number]; color?: string; fade?: number }) {
   const dpr = useThree((s) => s.viewport.dpr);
   const geometry = useMemo(() => {
     const { positions, kinds } = carPoints(1);
@@ -133,9 +153,9 @@ function StandIn({ size, color }: { size: [number, number, number]; color?: stri
         fragmentShader: standFragment,
         transparent: true,
         depthWrite: false,
-        uniforms: { uPaint: { value: new THREE.Color(color ?? '#9a9aa4') }, uSize: { value: 10 * dpr } },
+        uniforms: { uPaint: { value: new THREE.Color(color ?? '#9a9aa4') }, uSize: { value: 10 * dpr }, uFade: { value: fade } },
       }),
-    [color, dpr],
+    [color, dpr, fade],
   );
   useEffect(() => () => material.dispose(), [material]);
   const [L, W, H] = size;
@@ -175,7 +195,11 @@ function Bay({
         <meshBasicMaterial map={radial} color="#000000" transparent opacity={0.72} depthWrite={false} toneMapped={false} />
       </mesh>
       <group position={[0, 0, bay.z]} rotation={[0, -Math.PI / 2, 0]}>
-        {scanned ? <ScannedCar url={car.splat!} matrix={car.transform!} front={car.front} /> : <StandIn size={car.size} color={car.color} />}
+        {scanned ? (
+          <ScannedCar url={car.splat!} matrix={car.transform!} front={car.front} />
+        ) : (
+          <StandIn size={car.size} color={car.color} />
+        )}
       </group>
       {/* What the pointer hits: a box the size of the car. */}
       <mesh
@@ -205,17 +229,46 @@ function Bay({
   );
 }
 
-/** Standing in the garage at eye level, far enough back to see the whole row. */
+/**
+ * How far back to stand (m) to see the whole row, for a camera with this field of view and shape.
+ * A tall, narrow screen (a phone) would have to stand so far back the cars turn into specks
+ * between ceiling and floor, so there it stands closer and you turn to see the walls.
+ */
+function standBack(fov: number, aspect: number, total: number) {
+  const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * aspect);
+  const fit = (total / 2 + 0.9) / Math.tan(half);
+  return Math.max(6.5, Math.min(fit, Math.max(12, total * 1.1)));
+}
+
+/** The room, long enough that the camera stays inside it (a narrow screen stands further back). */
+function Room({ bays, total, depth }: { bays: RoomBay[]; total: number; depth: number }) {
+  const fov = useThree((s) => (s.camera as THREE.PerspectiveCamera).fov);
+  const size = useThree((s) => s.size);
+  const furthest = -0.3 + standBack(fov, size.width / size.height, total) * ZOOM_OUT;
+  return <GarageRoom bays={bays} total={total} depth={depth} front={Math.max(depth / 2 + 7, furthest + 1.5)} />;
+}
+
+/**
+ * Standing in the garage at eye level, far enough back to see the whole row. Looking around is
+ * limited to what you could do standing there: turning no further than keeps you inside the
+ * walls, and no looking down from above the ceiling.
+ */
 function Rig({ total, resetKey }: { total: number; resetKey: number }) {
   const camera = useThree((s) => s.camera as THREE.PerspectiveCamera);
   const controls = useThree((s) => s.controls) as unknown as OrbitImpl | null;
   const size = useThree((s) => s.size);
   useEffect(() => {
-    const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * (size.width / size.height));
-    const d = Math.max(6.5, (total / 2 + 0.9) / Math.tan(half));
+    const d = standBack(camera.fov, size.width / size.height, total);
     camera.position.set(Math.min(1.4, total * 0.12), 1.75, -0.3 + d);
-    controls?.target.set(0, 0.92, -0.3);
-    controls?.update();
+    if (controls) {
+      controls.target.set(0, 0.92, -0.3);
+      const inside = Math.asin(Math.min(0.95, (ROOM_SIDE + total / 2 - 0.7) / d));
+      controls.minAzimuthAngle = -inside;
+      controls.maxAzimuthAngle = inside;
+      controls.minPolarAngle = THREE.MathUtils.degToRad(55);
+      controls.maxDistance = d * ZOOM_OUT;
+      controls.update();
+    }
   }, [camera, controls, total, size.width, size.height, resetKey]);
   return null;
 }
@@ -245,7 +298,7 @@ export function GarageScene({
       <Canvas camera={{ fov: 34, near: 0.1, far: 400 }} gl={{ antialias: false }} dpr={[1, 2]}>
         <color attach="background" args={['#050506']} />
         <Spark />
-        <GarageRoom bays={bays} total={total} depth={depth} front={depth / 2 + 7} />
+        <Room bays={bays} total={total} depth={depth} />
         {bays.map((b) => (
           <Bay
             key={b.car.id}
@@ -258,7 +311,7 @@ export function GarageScene({
             onPick={() => onPick(b.car.id)}
           />
         ))}
-        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2.5} maxDistance={total + depth + 12} />
+        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2.5} />
         <Rig total={total} resetKey={resetKey} />
       </Canvas>
       <div className="viewer__tools">
