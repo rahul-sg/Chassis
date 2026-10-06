@@ -1,63 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { api } from '../lib/api';
-import { go, href, type Route } from '../lib/route';
+import { useRef } from 'react';
+import { go, href } from '../lib/route';
 import { carName, useGarage } from '../lib/store';
 import { useOnScreen } from '../lib/useOnScreen';
 import { ScanCar } from '../three/ScanCar';
 import { CarThumb } from '../ui/CarThumb';
 import { ArrowIcon } from '../ui/icons';
-
-interface Feature {
-  name: string;
-  text: string;
-  to: Route;
-  where: string;
-}
-
-const FEATURES: Feature[] = [
-  {
-    name: 'Identify',
-    text: 'Make, model and likely years from a photo or the camera, then the full sheet: engine, gearbox, economy, running cost, recalls and crash ratings. Add the VIN and it’s exact.',
-    to: { page: 'identify' },
-    where: 'Open',
-  },
-  {
-    name: 'Spotted',
-    text: 'Every car you identify, kept as a collection. On your phone, quick spotting keeps the camera open: point, tap, next car.',
-    to: { page: 'spotted' },
-    where: 'Open',
-  },
-  {
-    name: 'Walk-around 360',
-    text: 'A 30-second video becomes a photoreal 3D model at real size, with its specs pinned on. No video? A quick AI sketch from one photo.',
-    to: { page: 'garage' },
-    where: 'Any car in your garage',
-  },
-  {
-    name: 'Mods',
-    text: 'Paint colour and finish, wheel colour and window tint, tried on a photo of your own car.',
-    to: { page: 'garage' },
-    where: 'Any car in your garage',
-  },
-  {
-    name: 'Condition',
-    text: 'Mark scratches and dents on the 3D model, compare before-and-after photos, and print a dated record.',
-    to: { page: 'garage' },
-    where: 'Any car in your garage',
-  },
-  {
-    name: 'Sell kit',
-    text: 'Studio photos, a listing written from the real numbers, and a small site with the 3D model for buyers.',
-    to: { page: 'garage' },
-    where: 'Any car in your garage',
-  },
-  {
-    name: 'Virtual garage',
-    text: 'Everything you own or want, parked side by side at real size. Compare any two.',
-    to: { page: 'garage' },
-    where: 'Open',
-  },
-];
 
 /** A real result (EPA and NHTSA data for this car), shown the way a build sheet would. */
 const EXAMPLE = [
@@ -120,28 +67,50 @@ function Hero() {
   );
 }
 
-function Features() {
+/**
+ * The two things Chassis does, in plain words for car people (the measurements in full are on How
+ * it works). Everything else gets one sentence.
+ */
+function Pitch() {
+  const cars = useGarage((s) => s.cars);
   return (
-    <section className="section wrap" aria-labelledby="features-title">
+    <section className="section wrap" aria-labelledby="pitch-title">
       <header className="section__head">
-        <h2 className="display" id="features-title">
+        <h2 className="display" id="pitch-title">
           What it does
         </h2>
       </header>
-      <ol className="index">
-        {FEATURES.map((f, i) => (
-          <li key={f.name}>
-            <a href={href(f.to)}>
-              <span className="index__n mono">{String(i + 1).padStart(2, '0')}</span>
-              <span className="index__name">{f.name}</span>
-              <span className="index__text">{f.text}</span>
-              <span className="index__go">
-                {f.where} <ArrowIcon />
-              </span>
-            </a>
-          </li>
-        ))}
-      </ol>
+      <div className="pitch">
+        <article>
+          <p className="pitch__label mono">Identify</p>
+          <h3 className="pitch__name">Point at any car. Know what it&nbsp;is.</h3>
+          <p>
+            Snap any car from 1984 on and get the make, model, years and the full spec sheet. When it says it’s sure, it’s almost always
+            right. When it isn’t sure, it tells you and shows the other likely cars. Got the VIN? Then it’s exact.
+          </p>
+          <a className="pitch__go" href={href({ page: 'identify' })}>
+            Identify a car <ArrowIcon />
+          </a>
+        </article>
+        <article>
+          <p className="pitch__label mono">3D scan</p>
+          <h3 className="pitch__name">Film your car. Get it in 3D.</h3>
+          <p>
+            Walk around your car filming for under a minute, phone at chest height. You get a 3D model you can spin to any angle, at its real
+            size: a Lexus UX came out within 4&nbsp;cm of its real length.
+          </p>
+          <a
+            className="pitch__go"
+            href={href(cars[0] ? { page: 'car', id: cars[0].id, tab: 'capture' } : { page: 'garage' })}
+          >
+            Scan your car <ArrowIcon />
+          </a>
+        </article>
+      </div>
+      <p className="pitch__rest">
+        Plus: full specs and recalls, a log of every car you spot, paint and wheel previews, a record of dents and scratches, a kit for
+        selling, and a garage that parks your cars side by side.
+      </p>
     </section>
   );
 }
@@ -192,7 +161,7 @@ function HowItWorks() {
   const steps = [
     {
       title: 'From a photo',
-      text: 'The car is found in the picture and compared with every make and model sold in the U.S. since 1984. The specs come from government data, never guessed.',
+      text: 'The car is found in the picture and compared with every model in the EPA’s U.S. records since 1984. The specs come from government data, never guessed.',
     },
     {
       title: 'From a video',
@@ -226,53 +195,13 @@ function HowItWorks() {
   );
 }
 
-function Numbers() {
-  const [vehicles, setVehicles] = useState<number | null>(null);
-  useEffect(() => {
-    api
-      .get<{ vehicles: number }>('/stats')
-      .then((s) => setVehicles(s.vehicles))
-      .catch(() => undefined);
-  }, []);
-  return (
-    <section className="section wrap" aria-labelledby="numbers-title">
-      <header className="section__head">
-        <h2 className="display" id="numbers-title">
-          The numbers behind it
-        </h2>
-      </header>
-      <dl className="numbers">
-        <div>
-          <dt className="mono">{vehicles ? vehicles.toLocaleString() : '50,000+'}</dt>
-          <dd>
-            Vehicles in the EPA’s fuel economy records, 1984 to today, with NHTSA recalls and crash ratings on top. Every value shows where it
-            came from.
-          </dd>
-        </div>
-        <div>
-          <dt className="mono">81%</dt>
-          <dd>
-            Photos matched to the exact make and model, and 97% in the top five, measured on 600 photos it had never seen. When it isn’t sure,
-            it says so.
-          </dd>
-        </div>
-        <div>
-          <dt className="mono">15–30 min</dt>
-          <dd>From a walk-around video to a 3D model on an M1 Pro, all on the Mac itself: your photos and videos never leave it.</dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
 export function Home() {
   return (
     <div className="home">
       <Hero />
-      <Features />
+      <Pitch />
       <YourGarage />
       <HowItWorks />
-      <Numbers />
     </div>
   );
 }

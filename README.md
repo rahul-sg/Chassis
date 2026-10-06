@@ -1,15 +1,11 @@
 # Chassis
 
-Take a photo of a car and get what it is and everything about it. Film a 30-second walk-around and it becomes a photoreal 3D model you can spin, restyle, inspect, sell and park in your own virtual garage. It all runs on your Mac.
+Chassis runs on your Mac and does two things:
 
-- **Identify**: a photo (or the live camera) becomes the make, model and likely years, with the spec sheet: engine, gearbox, fuel economy, running cost, crash ratings and recalls. Add the VIN (typed or photographed) to make it exact.
-- **Spotted**: every car you identify is kept as a collection. On your phone, quick spotting keeps the camera open: point, tap, next car.
-- **Walk-around 360**: a short video becomes a Gaussian-splat 3D model of the car, scaled to real size, with spec hotspots.
-- **One photo → 3D**: no video? An AI sketch of the shape from a single photo, always labelled as a guess.
-- **Mods**: try paint colours and finishes, wheel colours and window tint on a photo of your car.
-- **Condition**: pin scratches and dents on the 3D model or a photo, compare before and after photos, print a report.
-- **Sell kit**: studio photos with the background swapped, a listing written from the spec data, and a small website with the photos, specs and 3D model to host anywhere. A link to Kelley Blue Book helps you price it (just a link: nothing is fetched from KBB).
-- **Virtual garage**: every car parked side by side at real size; compare any two.
+- **Identification with calibrated confidence.** One photo gives the make, model and likely model years, matched against every model in the EPA’s U.S. records since 1984. The match percentage means what it says: on 600 held-out photos, matches shown at 95% or more were right 98% of the time, and those at 50–80% about 75%. A VIN makes it exact.
+- **Metric-accurate 3D from a phone video.** A 30–60 second walk-around becomes a photoreal Gaussian-splat model at true size, scaled from the height the phone was held at (or exactly, from a length you enter). A Lexus UX filmed on an iPhone measured 4.46 × 1.85 × 1.49 m; the real car is 4.50 × 1.84 × 1.54 m.
+
+Around those two: the EPA and NHTSA spec sheet, a collection of every car you've spotted, a one-photo 3D sketch when there's no video, paint and wheel previews, a condition record, a sell kit with a Kelley Blue Book link, and a garage that parks your cars side by side at real size.
 
 ## Set up
 
