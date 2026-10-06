@@ -5,13 +5,18 @@ export interface CameraHandle {
   grab: () => Promise<Blob | null>;
 }
 
-/** Live camera preview with a framing guide. Uses the back camera on phones. */
+/**
+ * Live camera preview with a framing guide. Uses the back camera on phones. A camera facing you
+ * (a laptop's, or a phone's front one) is shown mirrored, like a mirror or FaceTime; the photo
+ * itself is never flipped, so badges and plates read the right way round.
+ */
 export const Camera = forwardRef<CameraHandle, { onState?: (s: 'starting' | 'live' | 'blocked' | 'none') => void }>(function Camera(
   { onState },
   ref,
 ) {
   const video = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<'starting' | 'live' | 'blocked' | 'none'>('starting');
+  const [mirror, setMirror] = useState(false);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -29,6 +34,7 @@ export const Camera = forwardRef<CameraHandle, { onState?: (s: 'starting' | 'liv
       .then((s) => {
         if (!live) return s.getTracks().forEach((t) => t.stop());
         stream = s;
+        setMirror(s.getVideoTracks()[0]?.getSettings().facingMode !== 'environment');
         if (video.current) {
           video.current.srcObject = s;
           void video.current.play();
@@ -56,7 +62,7 @@ export const Camera = forwardRef<CameraHandle, { onState?: (s: 'starting' | 'liv
   }));
 
   return (
-    <div className={`camera camera--${state}`}>
+    <div className={`camera camera--${state}${mirror ? ' camera--mirror' : ''}`}>
       <video ref={video} playsInline muted />
       {state === 'live' && <div className="camera__guide" aria-hidden />}
       {state === 'starting' && <p className="camera__msg">Starting the camera…</p>}

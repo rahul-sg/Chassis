@@ -84,7 +84,7 @@ function signTexture() {
   });
 }
 
-function useMaterials() {
+export function useWallMaterials() {
   const m = useMemo(() => {
     const steelMap = brushed();
     const woodMap = grain();
@@ -96,8 +96,9 @@ function useMaterials() {
       gloss: new THREE.MeshStandardMaterial({ color: '#0f1013', roughness: 0.18, metalness: 0.35 }),
       steel: new THREE.MeshStandardMaterial({ map: steelMap, roughness: 0.32, metalness: 0.9 }),
       rubber: new THREE.MeshStandardMaterial({ color: '#141416', roughness: 0.85 }),
-      rim: new THREE.MeshStandardMaterial({ color: '#b9bec6', roughness: 0.25, metalness: 0.95 }),
-      darkRim: new THREE.MeshStandardMaterial({ color: '#2a2c31', roughness: 0.3, metalness: 0.8 }),
+      // Rims are only part metal: with no environment to reflect, full metal would read as black.
+      rim: new THREE.MeshStandardMaterial({ color: '#c9cdd3', roughness: 0.35, metalness: 0.55 }),
+      darkRim: new THREE.MeshStandardMaterial({ color: '#45484f', roughness: 0.35, metalness: 0.5 }),
       warmLed: new THREE.MeshBasicMaterial({ color: '#ffd7a8', toneMapped: false }),
       charger: new THREE.MeshStandardMaterial({ color: '#e9eaec', roughness: 0.3, metalness: 0.1 }),
       glass: new THREE.MeshStandardMaterial({ color: '#0a0b0d', roughness: 0.08, metalness: 0.4 }),
@@ -113,8 +114,10 @@ function useMaterials() {
   return m;
 }
 
+export type WallMaterials = ReturnType<typeof useWallMaterials>;
+
 /** Vertical walnut slats from z0 to z1 on a black backer, standing above the cove light. */
-function SlatWall({ x, side, z0, z1, mats }: { x: number; side: number; z0: number; z1: number; mats: ReturnType<typeof useMaterials> }) {
+export function SlatWall({ x, side, z0, z1, mats }: { x: number; side: number; z0: number; z1: number; mats: WallMaterials }) {
   const pitch = 0.105;
   const count = Math.max(1, Math.floor((z1 - z0) / pitch));
   const mesh = useMemo(() => {
@@ -145,7 +148,7 @@ function SlatWall({ x, side, z0, z1, mats }: { x: number; side: number; z0: numb
 }
 
 /** A run of gloss-black cabinets with a steel worktop, uppers, under-cabinet light and a sign above. */
-function Workshop({ x, side, z0, run, mats }: { x: number; side: number; z0: number; run: number; mats: ReturnType<typeof useMaterials> }) {
+export function Workshop({ x, side, z0, run, mats }: { x: number; side: number; z0: number; run: number; mats: WallMaterials }) {
   const modules = Math.max(2, Math.round(run / 0.62));
   const mod = run / modules;
   const sign = useMemo(() => signTexture(), []);
@@ -200,10 +203,10 @@ function Workshop({ x, side, z0, run, mats }: { x: number; side: number; z0: num
 }
 
 /** One wheel and tyre, mounted on the wall with its face to the room. */
-function Wheel({ position, side, dark, mats }: { position: [number, number, number]; side: number; dark: boolean; mats: ReturnType<typeof useMaterials> }) {
+export function Wheel({ position, side, dark, mats }: { position: [number, number, number]; side: number; dark: boolean; mats: WallMaterials }) {
   const rimMat = dark ? mats.darkRim : mats.rim;
   return (
-    <group position={position} rotation={[0, side * (Math.PI / 2), 0]}>
+    <group position={position} rotation={[0, -side * (Math.PI / 2), 0]}>
       {/* The group's z axis points out of the wall: the wheel's axle. */}
       <mesh material={mats.rubber}>
         <torusGeometry args={[0.27, 0.095, 18, 48]} />
@@ -227,7 +230,7 @@ function Wheel({ position, side, dark, mats }: { position: [number, number, numb
 }
 
 /** A wall charger with its status light and the cable coiled on a hook below. */
-function Charger({ x, side, z, mats }: { x: number; side: number; z: number; mats: ReturnType<typeof useMaterials> }) {
+export function Charger({ x, side, z, mats }: { x: number; side: number; z: number; mats: WallMaterials }) {
   return (
     <group position={[x - side * 0.06, 1.3, z]} rotation={[0, -side * (Math.PI / 2), 0]}>
       <mesh material={mats.charger}>
@@ -250,7 +253,7 @@ function Charger({ x, side, z, mats }: { x: number; side: number; z: number; mat
 }
 
 export function GarageWalls({ width, back, front }: { width: number; back: number; front: number }) {
-  const mats = useMaterials();
+  const mats = useWallMaterials();
   const left = -width / 2;
   const right = width / 2;
   const run = Math.min(3.6, (front - back) * 0.4);

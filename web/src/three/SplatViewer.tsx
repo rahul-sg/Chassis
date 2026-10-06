@@ -1,9 +1,12 @@
 import { Html, OrbitControls } from '@react-three/drei';
-import { Canvas, useThree } from '@react-three/fiber';
-import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { SplatMesh } from '@sparkjsdev/spark';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
+import { DetailBay, bayHalf } from './DetailBay';
+import { ROOM_HEIGHT } from './GarageRoom';
+import { Spark } from './spark';
 
 export interface Marker {
   id: string;
@@ -11,20 +14,6 @@ export interface Marker {
   label: string;
   body?: ReactNode;
   tone?: 'accent' | 'note' | 'done';
-}
-
-/** Spark draws Gaussian splats inside the normal three.js scene. */
-function Spark() {
-  const gl = useThree((s) => s.gl);
-  const scene = useThree((s) => s.scene);
-  useEffect(() => {
-    const spark = new SparkRenderer({ renderer: gl });
-    scene.add(spark);
-    return () => {
-      scene.remove(spark);
-    };
-  }, [gl, scene]);
-  return null;
 }
 
 /** The splat, placed by its 4×4 transform (row-major), turned round when front is −1. */
@@ -77,55 +66,32 @@ function Splat({
   );
 }
 
-function Studio({ size }: { size: [number, number, number] }) {
-  const shadow = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const g = c.getContext('2d')!;
-    const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-    grad.addColorStop(0, 'rgba(0,0,0,0.6)');
-    grad.addColorStop(0.6, 'rgba(0,0,0,0.25)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 128, 128);
-    return new THREE.CanvasTexture(c);
-  }, []);
-  const ring = useMemo(() => {
-    const p: number[] = [];
-    const r = Math.max(size[0], size[2]) * 0.78;
-    for (let i = 0; i < 260; i++) {
-      const a = (i / 260) * Math.PI * 2;
-      p.push(Math.cos(a) * r, 0.001, Math.sin(a) * r);
-    }
-    return new THREE.Float32BufferAttribute(p, 3);
-  }, [size]);
-  return (
-    <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[Math.max(size[0], size[2]) * 2.4, 64]} />
-        <meshBasicMaterial color="#0d0d10" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} scale={[size[0] * 1.35, size[2] * 2.2, 1]}>
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial map={shadow} transparent depthWrite={false} />
-      </mesh>
-      <points>
-        <bufferGeometry attributes={{ position: ring }} />
-        <pointsMaterial size={0.03} color="#4a4a55" />
-      </points>
-    </>
-  );
-}
-
+/** Orbiting the car, kept inside the bay's walls and under its ceiling. */
 function Rig({ size, resetKey, autoRotate }: { size: [number, number, number]; resetKey: number; autoRotate: boolean }) {
   const controls = useRef<OrbitImpl>(null);
-  const camera = useThree((s) => s.camera);
+  const camera = useThree((s) => s.camera as THREE.PerspectiveCamera);
+  const aspect = useThree((s) => s.size.width / s.size.height);
   const L = size[0];
+  const far = bayHalf(L) - 0.8;
   useEffect(() => {
-    camera.position.set(L * 0.78, size[1] * 0.95, L * 0.86);
-    controls.current?.target.set(0, size[1] * 0.45, 0);
+    // A tall, narrow screen (a phone) gets a wider lens and stands back far enough to fit the car.
+    const wide = THREE.MathUtils.degToRad(40) / 2;
+    camera.fov = aspect < 1 ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(wide) / aspect)) : 32;
+    camera.updateProjectionMatrix();
+    const target = new THREE.Vector3(0, size[1] * 0.45, 0);
+    const start = new THREE.Vector3(L * 0.78, size[1] * 0.95, L * 0.86).sub(target);
+    if (aspect < 1) start.setLength(Math.min(far, Math.hypot(L, size[2]) / 2 / Math.sin(wide)));
+    camera.position.copy(target).add(start);
+    controls.current?.target.copy(target);
     controls.current?.update();
-  }, [camera, L, size, resetKey]);
+  }, [camera, aspect, L, far, size, resetKey]);
+  // The further out the camera, the less it may look down, so it never rises through the ceiling.
+  useFrame(() => {
+    const c = controls.current;
+    if (!c) return;
+    const d = Math.max(0.01, camera.position.distanceTo(c.target));
+    c.minPolarAngle = Math.acos(Math.min(1, (ROOM_HEIGHT - 0.35 - c.target.y) / d));
+  });
   return (
     <OrbitControls
       ref={controls}
@@ -134,7 +100,7 @@ function Rig({ size, resetKey, autoRotate }: { size: [number, number, number]; r
       autoRotate={autoRotate}
       autoRotateSpeed={0.7}
       minDistance={L * 0.45}
-      maxDistance={L * 3.2}
+      maxDistance={far}
       maxPolarAngle={Math.PI / 2 - 0.04}
     />
   );
@@ -185,7 +151,7 @@ export function SplatViewer({
       <Canvas camera={{ fov: 32, near: 0.05, far: 200 }} gl={{ antialias: false }} dpr={[1, 2]} onPointerMissed={() => setOpen(null)}>
         <color attach="background" args={['#0a0a0c']} />
         <Spark />
-        <Studio size={size} />
+        <DetailBay size={size} />
         <Splat
           url={url}
           matrix={matrix}
@@ -203,7 +169,8 @@ export function SplatViewer({
           <i style={{ width: `${progress * 100}%` }} />
         </div>
       )}
-      <div className="viewer__tools">
+      {/* Pressing a tool mustn't count as grabbing the view (which stops the turning first). */}
+      <div className="viewer__tools" onPointerDown={(e) => e.stopPropagation()}>
         <button className="btn btn--sm" onClick={() => setAuto((a) => !a)} aria-pressed={auto}>
           {auto ? 'Stop turning' : 'Turn'}
         </button>

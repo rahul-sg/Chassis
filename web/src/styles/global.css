@@ -1203,6 +1203,9 @@ code {
   height: 100%;
   object-fit: cover;
 }
+.camera--mirror video {
+  transform: scaleX(-1);
+}
 .camera__guide {
   position: absolute;
   inset: 14% 10%;

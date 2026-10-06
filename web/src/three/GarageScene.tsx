@@ -1,6 +1,6 @@
 import { Html, OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
-import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+import { SplatMesh } from '@sparkjsdev/spark';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
@@ -8,6 +8,7 @@ import { carName } from '../lib/store';
 import type { Identity } from '../lib/types';
 import { CAR, carPoints } from './carShape';
 import { GarageRoom, ROOM_SIDE, type RoomBay } from './GarageRoom';
+import { Spark } from './spark';
 
 /** One car as the garage needs it (GET /api/garage/scene). Sizes are metres, [length, width, height]. */
 export interface SceneCar {
@@ -44,36 +45,6 @@ function layout(cars: SceneCar[]) {
 }
 
 const ZOOM_OUT = 1.15; // how much further back than the starting view you can pull
-
-/**
- * Two splat renderers: one for the main camera and one for the floor's reflection camera. Spark
- * sorts the splats back to front for the camera that draws them, and one shared order would show
- * the far side of each car through the near side in one of the two views. Each renderer is shown
- * only to its own camera.
- */
-function Spark() {
-  const gl = useThree((s) => s.gl);
-  const scene = useThree((s) => s.scene);
-  const camera = useThree((s) => s.camera);
-  useEffect(() => {
-    const main = new SparkRenderer({ renderer: gl });
-    const mirrored = new SparkRenderer({ renderer: gl });
-    scene.add(main, mirrored);
-    const before = scene.onBeforeRender;
-    scene.onBeforeRender = function (this: THREE.Scene, ...args) {
-      main.visible = args[2] === camera;
-      mirrored.visible = args[2] !== camera;
-      before.apply(this, args);
-    };
-    return () => {
-      scene.onBeforeRender = before;
-      scene.remove(main, mirrored);
-      main.dispose();
-      mirrored.dispose();
-    };
-  }, [gl, scene, camera]);
-  return null;
-}
 
 /** Radial falloff texture: shadows under the cars and pools of light on the floor. */
 function useRadial() {

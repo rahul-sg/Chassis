@@ -13,8 +13,7 @@ RectAreaLightUniformsLib.init();
  * GarageWalls), and flush aluminium doors with frosted glass.
  * Every texture is drawn here, so there are no image files to download or license.
  *
- * The floor's reflections are real: the scene is drawn again from a mirrored camera, blurred
- * the way a glossy (not mirror) finish blurs it, and mixed into the epoxy.
+ * The floor, hex lights, wall panels and doors are shared with the car's own detail bay (DetailBay).
  */
 
 export const ROOM_HEIGHT = 3.2;
@@ -187,6 +186,85 @@ function Tubes({
   return <primitive object={mesh} />;
 }
 
+/** The ceiling's hexagon LED grid over a rectangle (x0..x1 by z0..z1). */
+export function HexLights({ x0, x1, z0, z1 }: { x0: number; x1: number; z0: number; z1: number }) {
+  const segs = useMemo(() => hexEdges(x0, x1, z0, z1), [x0, x1, z0, z1]);
+  const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#f4f7ff', toneMapped: false }), []);
+  useEffect(() => () => material.dispose(), [material]);
+  return <Tubes segs={segs} y={ROOM_HEIGHT - 0.03} material={material} />;
+}
+
+/**
+ * Dark glossy epoxy, width (x) by length (z), centred at z. Its reflections are real: the scene
+ * is drawn again from a mirrored camera, blurred the way a glossy (not mirror) finish blurs it.
+ */
+export function EpoxyFloor({ width, length, z = 0 }: { width: number; length: number; z?: number }) {
+  const map = useMemo(() => {
+    const t = epoxy();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(width / 2.5, length / 2.5);
+    return t;
+  }, [width, length]);
+  useEffect(() => () => map.dispose(), [map]);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, z]}>
+      <planeGeometry args={[width, length]} />
+      <MeshReflectorMaterial
+        map={map}
+        color={FLOOR_GAIN}
+        mirror={0.97}
+        mixStrength={1.6}
+        mixBlur={0.5}
+        blur={[120, 40]}
+        resolution={1024}
+        roughness={1}
+        metalness={0}
+      />
+    </mesh>
+  );
+}
+
+/** A wall of charcoal panels, `width` wide, facing +z from its position (place and turn it with a group). */
+export function PanelWall({ width }: { width: number }) {
+  const map = useMemo(() => {
+    const t = panels();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(width / 1.2, ROOM_HEIGHT / 1.2);
+    return t;
+  }, [width]);
+  useEffect(() => () => map.dispose(), [map]);
+  return (
+    <mesh position={[0, ROOM_HEIGHT / 2, 0]}>
+      <planeGeometry args={[width, ROOM_HEIGHT]} />
+      <meshStandardMaterial map={map} roughness={0.7} metalness={0.15} />
+    </mesh>
+  );
+}
+
+/** A flush frosted-glass door, `width` wide, with a slim light bar above; faces +z. */
+export function FrostedDoor({ width, height = 2.3 }: { width: number; height?: number }) {
+  const tex = useMemo(() => ({ door: doorColour(), glow: doorGlow() }), []);
+  useEffect(
+    () => () => {
+      tex.door.dispose();
+      tex.glow.dispose();
+    },
+    [tex],
+  );
+  return (
+    <group>
+      <mesh position={[0, height / 2, 0]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial map={tex.door} emissiveMap={tex.glow} emissive="#ffffff" emissiveIntensity={0.55} roughness={0.25} metalness={0.4} />
+      </mesh>
+      <mesh position={[0, height + 0.1, 0.04]}>
+        <boxGeometry args={[width, 0.03, 0.06]} />
+        <meshBasicMaterial color="#fff6ea" toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export interface RoomBay {
   x: number;
   width: number;
@@ -207,33 +285,8 @@ export function GarageRoom({
   const width = total + 2 * ROOM_SIDE;
   const back = -depth / 2 - 0.5;
   const length = front - back;
-  const tex = useMemo(() => {
-    const floor = epoxy();
-    floor.wrapS = floor.wrapT = THREE.RepeatWrapping;
-    floor.repeat.set(width / 2.5, length / 2.5);
-    const backPanels = panels();
-    backPanels.wrapS = backPanels.wrapT = THREE.RepeatWrapping;
-    backPanels.repeat.set(width / 1.2, ROOM_HEIGHT / 1.2);
-    return {
-      floor,
-      backPanels,
-      door: doorColour(),
-      glow: doorGlow(),
-      numbers: bays.map((_, i) => bayNumber(i + 1)),
-    };
-  }, [width, length, bays]);
-  useEffect(
-    () => () => {
-      Object.values(tex)
-        .flat()
-        .forEach((t) => t.dispose());
-    },
-    [tex],
-  );
-  // The hex grid spans the bays, back to front.
-  const grid = useMemo(() => hexEdges(-total / 2 + 0.2, total / 2 - 0.2, back + 0.7, depth / 2 + 0.4), [total, back, depth]);
-  const ledMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#f4f7ff', toneMapped: false }), []);
-  useEffect(() => () => ledMat.dispose(), [ledMat]);
+  const numbers = useMemo(() => bays.map((_, i) => bayNumber(i + 1)), [bays]);
+  useEffect(() => () => numbers.forEach((t) => t.dispose()), [numbers]);
   const lines = [-total / 2, ...bays.map((b) => b.x + b.width / 2)];
 
   return (
@@ -249,23 +302,11 @@ export function GarageRoom({
         />
       ))}
       <pointLight position={[0, ROOM_HEIGHT - 0.25, front - 1.5]} intensity={1.3} distance={14} decay={1.6} color="#ffe6c8" />
-      <Tubes segs={grid} y={ROOM_HEIGHT - 0.03} material={ledMat} />
+      {/* The hex grid spans the bays, back to front. */}
+      <HexLights x0={-total / 2 + 0.2} x1={total / 2 - 0.2} z0={back + 0.7} z1={depth / 2 + 0.4} />
 
       {/* Floor: dark glossy epoxy, reflecting the cars and the lights. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (front + back) / 2]}>
-        <planeGeometry args={[width, length]} />
-        <MeshReflectorMaterial
-          map={tex.floor}
-          color={FLOOR_GAIN}
-          mirror={0.97}
-          mixStrength={1.6}
-          mixBlur={0.5}
-          blur={[120, 40]}
-          resolution={1024}
-          roughness={1}
-          metalness={0}
-        />
-      </mesh>
+      <EpoxyFloor width={width} length={length} z={(front + back) / 2} />
       {/* Bay markers: thin inlaid lines. */}
       {lines.map((x, i) => (
         <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.003, 0]}>
@@ -275,36 +316,18 @@ export function GarageRoom({
       ))}
 
       {/* Back wall: charcoal panels, a flush frosted-glass door per bay with a slim light above. */}
-      <mesh position={[0, ROOM_HEIGHT / 2, back]}>
-        <planeGeometry args={[width, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={tex.backPanels} roughness={0.7} metalness={0.15} />
-      </mesh>
-      {bays.map((b, i) => {
-        const w = Math.min(b.width - 0.5, 2.7);
-        return (
-          <group key={i} position={[b.x, 0, back + 0.02]}>
-            <mesh position={[0, 1.15, 0]}>
-              <planeGeometry args={[w, 2.3]} />
-              <meshStandardMaterial
-                map={tex.door}
-                emissiveMap={tex.glow}
-                emissive="#ffffff"
-                emissiveIntensity={0.55}
-                roughness={0.25}
-                metalness={0.4}
-              />
-            </mesh>
-            <mesh position={[0, 2.4, 0.04]}>
-              <boxGeometry args={[w, 0.03, 0.06]} />
-              <meshBasicMaterial color="#fff6ea" toneMapped={false} />
-            </mesh>
-            <mesh position={[0, 2.68, 0.01]}>
-              <planeGeometry args={[0.5, 0.25]} />
-              <meshStandardMaterial map={tex.numbers[i]} alphaTest={0.3} roughness={0.4} metalness={0.5} />
-            </mesh>
-          </group>
-        );
-      })}
+      <group position={[0, 0, back]}>
+        <PanelWall width={width} />
+      </group>
+      {bays.map((b, i) => (
+        <group key={i} position={[b.x, 0, back + 0.02]}>
+          <FrostedDoor width={Math.min(b.width - 0.5, 2.7)} />
+          <mesh position={[0, 2.68, 0.01]}>
+            <planeGeometry args={[0.5, 0.25]} />
+            <meshStandardMaterial map={numbers[i]} alphaTest={0.3} roughness={0.4} metalness={0.5} />
+          </mesh>
+        </group>
+      ))}
 
       {/* Side walls: walnut slats and what's mounted on them (GarageWalls), a warm cove light along the floor. */}
       <GarageWalls width={width} back={back} front={front} />
