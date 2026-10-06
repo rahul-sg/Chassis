@@ -1,0 +1,13 @@
+node_modules
+dist
+.DS_Store
+__pycache__
+server/.venv
+# Your cars, photos and captures stay on this computer
+data/
+# Downloaded tools and model weights
+tools/
+*.pt
+*.safetensors
+# Brush writes its GPU tuning cache here while training
+target/

@@ -1,0 +1,30 @@
+# Apple Silicon, Python 3.10 (miniforge). Versions match the Sideline vision stack where shared.
+fastapi>=0.115
+uvicorn>=0.32
+python-multipart>=0.0.12
+httpx>=0.27
+pillow>=11
+numpy==1.26.4
+scipy==1.15.3
+opencv-python==4.11.0.86
+torch==2.14.1
+torchvision==0.29.1
+ultralytics==8.4.173
+open_clip_torch>=2.29
+easyocr==1.7.2
+pycolmap>=4.2
+plyfile>=1.1
+transformers>=4.46,<5
+sentencepiece>=0.2
+protobuf>=5
+huggingface_hub>=0.36
+# Cut-outs (BiRefNet runs from its Hugging Face repo)
+timm>=1.0
+einops>=0.8
+kornia>=0.8
+# One photo → 3D (TripoSR's source goes in tools/TripoSR; see the README)
+omegaconf==2.3.0
+trimesh>=4.4,<5
+scikit-image>=0.24
+# Only for server/tools/eval_identify.py
+polars>=1.0
