@@ -13,6 +13,7 @@ interface GarageState {
   updateCar: (id: string, patch: Partial<Car>) => Promise<Car>;
   removeCar: (id: string) => Promise<void>;
   addSpotted: (s: Omit<Spotted, 'id' | 'createdAt'>) => Promise<Spotted>;
+  updateSpotted: (id: string, patch: Partial<Spotted>) => Promise<Spotted>;
   removeSpotted: (id: string) => Promise<void>;
 }
 
@@ -46,6 +47,11 @@ export const useGarage = create<GarageState>((set, get) => ({
   addSpotted: async (s) => {
     const saved = await api.post<Spotted>('/spotted', s);
     set({ spotted: [saved, ...get().spotted] });
+    return saved;
+  },
+  updateSpotted: async (id, patch) => {
+    const saved = await api.patch<Spotted>(`/spotted/${id}`, patch);
+    set({ spotted: get().spotted.map((s) => (s.id === id ? saved : s)) });
     return saved;
   },
   removeSpotted: async (id) => {

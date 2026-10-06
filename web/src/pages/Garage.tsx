@@ -137,15 +137,15 @@ export function Garage() {
           <h1 className="display">{cars.length ? `${cars.length} car${cars.length > 1 ? 's' : ''}` : 'Your garage'}</h1>
           <p>Every car you add lives here with its specs, its 3D model, mods you’ve tried, its condition record and a listing kit.</p>
         </div>
-        <button className="btn btn--accent" onClick={() => go({ page: 'snap' })}>
+        <button className="btn btn--accent" onClick={() => go({ page: 'identify' })}>
           Add a car
         </button>
       </header>
 
       {loaded && cars.length === 0 && (
         <div className="empty">
-          <p>No cars yet. Snap a photo of yours, or enter its VIN or make and model, and it lands here with its spec sheet.</p>
-          <button className="btn btn--accent" onClick={() => go({ page: 'snap' })}>
+          <p>No cars yet. Photograph yours, or enter its VIN or make and model, and it lands here with its spec sheet.</p>
+          <button className="btn btn--accent" onClick={() => go({ page: 'identify' })}>
             Add your first car
           </button>
         </div>

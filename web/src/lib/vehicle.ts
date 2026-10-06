@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Candidate, PaintColor, SpecSheet } from './types';
+import type { Candidate, Identity, PaintColor, Spec, SpecSheet } from './types';
 
 export interface IdentifyResult {
   photo: string;
@@ -28,6 +28,30 @@ export interface VinResult {
 }
 
 export const identifyPhoto = (file: Blob) => api.upload<IdentifyResult>('/identify', file);
+
+/** The best match in a photo as an identity (with the runners-up), or null when no car was found. */
+export function identityFrom(r: IdentifyResult): Identity | null {
+  const top = r.candidates[0];
+  if (!r.found || !top) return null;
+  return {
+    make: top.make,
+    model: top.model,
+    yearFrom: top.yearFrom,
+    yearTo: top.yearTo,
+    year: top.year ?? top.yearTo,
+    confidence: top.confidence,
+    source: 'photo',
+    alternatives: r.candidates.slice(1, 5).map(({ make, model, yearFrom, yearTo, confidence }) => ({ make, model, yearFrom, yearTo, confidence })),
+  };
+}
+
+/** The two figures a spotted car is listed with: engine and economy (or range, for an EV). */
+export function headlineSpecs(sheet: SpecSheet): Spec[] {
+  return sheet.groups
+    .flatMap((g) => g.items)
+    .filter((i) => ['Engine', 'Combined', 'Range'].includes(i.label))
+    .slice(0, 2);
+}
 export const readVinPhoto = (file: Blob) => api.upload<VinResult>('/vin/read', file);
 export const lookupVin = (vin: string) => api.get<VinResult>(`/vin/${encodeURIComponent(vin.trim().toUpperCase())}`);
 

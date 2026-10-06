@@ -896,29 +896,29 @@ code {
   box-shadow: 0 0 0 4px rgba(255, 106, 31, 0.2);
 }
 
-/* ---------- Snap ---------- */
-.snap__alt {
+/* ---------- Identify ---------- */
+.identify__alt {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
 }
-.snap__alt--inline {
+.identify__alt--inline {
   justify-content: flex-start;
   margin: 14px 0 0 -14px;
 }
-.snap__grid {
+.identify__grid {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 40px;
   align-items: start;
 }
-.snap__photo {
+.identify__photo {
   position: sticky;
   top: calc(var(--top-h) + 24px);
 }
-.snap__ms {
+.identify__ms {
   margin: 10px 0 0;
   font-size: 13px;
 }
@@ -929,11 +929,7 @@ code {
   border: 1px solid var(--rule);
   border-radius: 8px;
 }
-.panelbox--solo {
-  max-width: 820px;
-  margin: 20px auto 0;
-}
-.snap__sheet {
+.identify__sheet {
   margin-top: 40px;
 }
 
@@ -1151,10 +1147,10 @@ code {
 }
 
 @media (max-width: 1000px) {
-  .snap__grid {
+  .identify__grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .snap__photo {
+  .identify__photo {
     position: static;
   }
   .sheet__groups,
@@ -1163,7 +1159,7 @@ code {
   }
 }
 
-/* ---------- Spotter ---------- */
+/* ---------- Camera, quick spotting and Spotted ---------- */
 .tally {
   display: flex;
   gap: 28px;
@@ -1181,13 +1177,45 @@ code {
   font-stretch: 78%;
   color: var(--white);
 }
-.spotter__live {
+.identify__live {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   gap: 28px;
   align-items: start;
 }
-.spotter__cam {
+.identify__live--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+.identify__modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+}
+.identify__modes .muted {
+  margin: 0;
+  font-size: 14px;
+}
+.identify__saved {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.identify__recent {
+  padding-top: 64px;
+}
+.identify__recent .section__head h2 {
+  margin: 0;
+  font-size: 26px;
+}
+.spotted__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.identify__cam {
   overflow: hidden;
   background: #000;
   border: 1px solid var(--rule);
@@ -1223,7 +1251,7 @@ code {
   text-align: center;
   color: var(--text-2);
 }
-.spotter__bar {
+.identify__bar {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1250,40 +1278,37 @@ code {
 .shutter:active span {
   transform: scale(0.88);
 }
-.spotter__side {
+.identify__side {
   display: grid;
   gap: 16px;
 }
-.spotter__status {
+.identify__status {
   margin: 0;
   font-weight: 600;
   color: var(--accent);
 }
-.spotter__last,
-.spotter__help {
+.identify__last,
+.identify__help {
   padding: 20px;
   background: var(--panel);
   border: 1px solid var(--rule);
   border-radius: 8px;
 }
-.spotter__last img {
+.identify__last img {
   width: 100%;
   margin-bottom: 14px;
   border-radius: 8px;
 }
-.spotter__last h2 {
+.identify__last h2 {
   font-size: 26px;
 }
-.spotter__last .muted {
+.identify__last .muted {
   margin: 8px 0 14px;
 }
-.spotter__help p {
+.identify__help p {
   margin: 0;
   color: var(--text-2);
   font-size: 14px;
-}
-.spotter__list {
-  padding-top: 64px;
 }
 .seg {
   display: inline-flex;
@@ -1394,7 +1419,7 @@ code {
 }
 
 @media (max-width: 1000px) {
-  .spotter__live {
+  .identify__live {
     grid-template-columns: minmax(0, 1fr);
   }
 }

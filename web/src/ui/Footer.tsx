@@ -10,11 +10,11 @@ export function Footer() {
             <Mark size={22} />
             <span>Chassis</span>
           </a>
-          <p>Know any car from a photo. Turn yours into 3D.</p>
+          <p>Every car on the street, down to the gearbox.</p>
         </div>
         <nav className="footer__links" aria-label="Pages">
-          <a href={href({ page: 'snap' })}>Snap &amp; Spec</a>
-          <a href={href({ page: 'spotter' })}>Spotter</a>
+          <a href={href({ page: 'identify' })}>Identify</a>
+          <a href={href({ page: 'spotted' })}>Spotted</a>
           <a href={href({ page: 'garage' })}>My garage</a>
           <a href={href({ page: 'about' })}>How it works</a>
         </nav>

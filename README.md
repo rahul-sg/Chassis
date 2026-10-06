@@ -2,8 +2,8 @@
 
 Take a photo of a car and get what it is and everything about it. Film a 30-second walk-around and it becomes a photoreal 3D model you can spin, restyle, inspect, sell and park in your own virtual garage. It all runs on your Mac.
 
-- **Snap & Spec**: a photo becomes the make, model and likely years, with the spec sheet: engine, gearbox, fuel economy, running cost, crash ratings and recalls. Add the VIN (typed or photographed) to make it exact.
-- **Spotter**: point your phone at cars on the street and build a collection of everything you've seen.
+- **Identify**: a photo (or the live camera) becomes the make, model and likely years, with the spec sheet: engine, gearbox, fuel economy, running cost, crash ratings and recalls. Add the VIN (typed or photographed) to make it exact.
+- **Spotted**: every car you identify is kept as a collection. On your phone, quick spotting keeps the camera open: point, tap, next car.
 - **Walk-around 360**: a short video becomes a Gaussian-splat 3D model of the car, scaled to real size, with spec hotspots.
 - **One photo → 3D**: no video? An AI sketch of the shape from a single photo, always labelled as a guess.
 - **Mods**: try paint colours and finishes, wheel colours and window tint on a photo of your car.
@@ -23,7 +23,7 @@ npm run dev                  # http://localhost:4311
 
 The first time each feature runs it downloads what it needs: EPA data (2 MB), YOLO11 (45 MB), SigLIP (3.3 GB), EasyOCR (95 MB), BiRefNet (170 MB) and TripoSR (1.6 GB): about 5.3 GB in all, so leave room. The car-parts model for wheel and tint previews is trained once on this Mac, from the **How it works** page (about two hours on an M1 Pro, in the background).
 
-**On your phone:** `npm run phone` serves the site on your Wi-Fi at `https://<this-mac>:4312` (accept the certificate warning once; it's this Mac's own). Spotter and the camera work from there.
+**On your phone:** `npm run phone` serves the site on your Wi-Fi at `https://<this-mac>:4312` (accept the certificate warning once; it's this Mac's own). Quick spotting and the camera work from there.
 
 Use a Python from miniforge or python.org, not Homebrew under Rosetta: Intel builds of PyTorch can't use the Mac's GPU.
 

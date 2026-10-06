@@ -3,8 +3,8 @@ import { useRoute, type Route } from './lib/route';
 import { carName, useGarage } from './lib/store';
 import { About } from './pages/About';
 import { Home } from './pages/Home';
-import { Snap } from './pages/Snap';
-import { Spotter } from './pages/Spotter';
+import { Identify } from './pages/Identify';
+import { SpottedPage } from './pages/Spotted';
 import { Footer } from './ui/Footer';
 import { Header } from './ui/Header';
 
@@ -13,9 +13,9 @@ const CarPage = lazy(() => import('./pages/Car').then((m) => ({ default: m.CarPa
 const Garage = lazy(() => import('./pages/Garage').then((m) => ({ default: m.Garage })));
 
 const TITLES: Record<Exclude<Route['page'], 'car'>, string> = {
-  home: 'Chassis: know any car, turn yours into 3D',
-  snap: 'Snap & Spec · Chassis',
-  spotter: 'Spotter · Chassis',
+  home: 'Chassis: every car on the street, down to the gearbox',
+  identify: 'Identify · Chassis',
+  spotted: 'Spotted · Chassis',
   garage: 'My garage · Chassis',
   about: 'How it works · Chassis',
 };
@@ -41,8 +41,8 @@ export function App() {
       <Header route={route} />
       <main className="main" data-page={route.page}>
         {route.page === 'home' && <Home />}
-        {route.page === 'snap' && <Snap />}
-        {route.page === 'spotter' && <Spotter />}
+        {route.page === 'identify' && <Identify key={route.quick ? 'quick' : 'one'} quick={route.quick} />}
+        {route.page === 'spotted' && <SpottedPage />}
         <Suspense fallback={<div className="page wrap" aria-busy="true" />}>
           {route.page === 'garage' && <Garage />}
           {route.page === 'car' && <CarPage id={route.id} tab={route.tab} />}

@@ -16,15 +16,15 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    name: 'Snap & Spec',
-    text: 'Make, model and likely years from one photo, then the full sheet: engine, gearbox, economy, running cost, recalls and crash ratings. Add the VIN and it’s exact.',
-    to: { page: 'snap' },
+    name: 'Identify',
+    text: 'Make, model and likely years from a photo or the camera, then the full sheet: engine, gearbox, economy, running cost, recalls and crash ratings. Add the VIN and it’s exact.',
+    to: { page: 'identify' },
     where: 'Open',
   },
   {
-    name: 'Spotter',
-    text: 'Point your phone at cars on the street. Every one you spot is logged with what it is.',
-    to: { page: 'spotter' },
+    name: 'Spotted',
+    text: 'Every car you identify, kept as a collection. On your phone, quick spotting keeps the camera open: point, tap, next car.',
+    to: { page: 'spotted' },
     where: 'Open',
   },
   {
@@ -81,14 +81,14 @@ function Hero() {
       <div className="hero__inner wrap">
         <div className="hero__copy">
           <h1 className="display hero__title" id="hero-title">
-            Know any car from one photo.
+            Every car on the street, down to the gearbox.
           </h1>
           <p className="hero__lede">
-            Point a camera at a car and get its make, model, years and full spec sheet, straight from EPA and NHTSA data. Film a walk-around
-            of your own and it becomes a 3D model you can spin, restyle, check over and list for sale.
+            Photograph a car and get its engine, gearbox, fuel economy and crash rating from EPA and NHTSA records. Film your own and Chassis
+            turns it into a 3D model you can restyle, inspect and list.
           </p>
           <div className="actions">
-            <button className="btn btn--accent btn--lg" onClick={() => go({ page: 'snap' })}>
+            <button className="btn btn--accent btn--lg" onClick={() => go({ page: 'identify' })}>
               Identify a car
             </button>
             <button
@@ -157,7 +157,7 @@ function YourGarage() {
         </h2>
         <div className="actions">
           {spotted.length > 0 && (
-            <a className="btn" href={href({ page: 'spotter' })}>
+            <a className="btn" href={href({ page: 'spotted' })}>
               {spotted.length} spotted
             </a>
           )}
@@ -178,8 +178,8 @@ function YourGarage() {
         </div>
       ) : (
         <div className="empty">
-          <p>Nothing parked yet. Snap a photo of your car to add it: the specs come straight away, and the 3D whenever you film it.</p>
-          <button className="btn btn--accent" onClick={() => go({ page: 'snap' })}>
+          <p>Nothing parked yet. Photograph your car to add it: the specs come straight away, and the 3D whenever you film it.</p>
+          <button className="btn btn--accent" onClick={() => go({ page: 'identify' })}>
             Add your car
           </button>
         </div>

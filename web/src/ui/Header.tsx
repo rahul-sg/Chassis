@@ -2,9 +2,9 @@ import { go, href, type Route } from '../lib/route';
 import { useGarage } from '../lib/store';
 import { Mark } from './icons';
 
-const NAV: { page: 'snap' | 'spotter' | 'garage'; label: string }[] = [
-  { page: 'snap', label: 'Snap & Spec' },
-  { page: 'spotter', label: 'Spotter' },
+const NAV: { page: 'identify' | 'spotted' | 'garage'; label: string }[] = [
+  { page: 'identify', label: 'Identify' },
+  { page: 'spotted', label: 'Spotted' },
   { page: 'garage', label: 'My garage' },
 ];
 
@@ -30,8 +30,8 @@ export function Header({ route }: { route: Route }) {
             <a className="nav__link" href={href({ page: 'about' })} aria-current={active === 'about' ? 'page' : undefined}>
               How it works
             </a>
-            <button className="btn btn--accent btn--sm" onClick={() => go({ page: 'snap' })}>
-              Snap a car
+            <button className="btn btn--accent btn--sm" onClick={() => go({ page: 'identify' })}>
+              Identify a car
             </button>
           </div>
         </div>

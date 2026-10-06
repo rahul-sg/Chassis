@@ -28,7 +28,7 @@ const ACCURACY = {
 
 const STAGES = [
   {
-    name: 'Snap & Spec',
+    name: 'Identify',
     what: 'Finds the car in your photo, then compares it with every model family in the EPA’s records and picks the closest, with a likely range of model years.',
     how: 'YOLO11 segmentation finds the car · SigLIP (So400m) compares it with 1,454 EPA model families, then with each model year',
     figure: `${ACCURACY.top1} exact model and ${ACCURACY.top5} in the top five, on ${ACCURACY.images} test photos it was never tuned on`,
@@ -283,8 +283,8 @@ export function About() {
 
       <section className="section about__cta">
         <h2 className="display">Try it on your car</h2>
-        <button className="btn btn--accent btn--lg" onClick={() => go({ page: 'snap' })}>
-          Snap a car
+        <button className="btn btn--accent btn--lg" onClick={() => go({ page: 'identify' })}>
+          Identify a car
         </button>
       </section>
     </div>

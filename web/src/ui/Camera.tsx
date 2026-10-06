@@ -71,7 +71,7 @@ export const Camera = forwardRef<CameraHandle, { onState?: (s: 'starting' | 'liv
           Camera access is blocked. Allow it for this page in your browser’s site settings, or add a photo instead.
         </p>
       )}
-      {state === 'none' && <p className="camera__msg">No camera here. Add a photo instead, or open Spotter on your phone.</p>}
+      {state === 'none' && <p className="camera__msg">No camera here. Add a photo instead, or open Chassis on your phone.</p>}
     </div>
   );
 });

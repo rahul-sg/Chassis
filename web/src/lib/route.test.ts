@@ -5,8 +5,9 @@ describe('routes', () => {
   it('round-trips every page and car tab', () => {
     const routes: Route[] = [
       { page: 'home' },
-      { page: 'snap' },
-      { page: 'spotter' },
+      { page: 'identify' },
+      { page: 'identify', quick: true },
+      { page: 'spotted' },
       { page: 'garage' },
       { page: 'about' },
       ...CAR_TABS.map((tab) => ({ page: 'car' as const, id: 'ab12cd34ef', tab })),
@@ -18,6 +19,11 @@ describe('routes', () => {
     expect(parse('#/car/x1')).toEqual({ page: 'car', id: 'x1', tab: '360' });
     expect(parse('#/car/x1/nope')).toEqual({ page: 'car', id: 'x1', tab: '360' });
     expect(href({ page: 'car', id: 'x1', tab: '360' })).toBe('#/car/x1');
+  });
+
+  it('sends the old Snap & Spec and Spotter links to Identify', () => {
+    expect(parse('#/snap')).toEqual({ page: 'identify' });
+    expect(parse('#/spotter')).toEqual({ page: 'identify', quick: true });
   });
 
   it('sends unknown or empty paths home', () => {
