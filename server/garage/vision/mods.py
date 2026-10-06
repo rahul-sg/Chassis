@@ -4,7 +4,7 @@ Paint: inside the car's outline, each pixel is weighted by how close it is to th
 paint colour (so glass, black trim, tyres and chrome keep their look), then moved to the new
 colour in Lab space keeping its brightness relative to the paint: reflections and shading
 stay where they were. Wheels and windows come from the car-parts model when it's trained
-(tools/train_parts.py); without it, wheel and tint previews aren't offered.
+(the one-time job in partsmodel.py); without it, wheel and tint previews aren’t offered.
 """
 from __future__ import annotations
 
