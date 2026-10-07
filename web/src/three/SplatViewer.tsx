@@ -1,9 +1,10 @@
 import { Html, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { SplatMesh } from '@sparkjsdev/spark';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
+import { Core } from './Core';
 import { DetailBay, bayHalf } from './DetailBay';
 import { ROOM_HEIGHT } from './GarageRoom';
 import { Spark } from './spark';
@@ -127,6 +128,7 @@ export function SplatViewer({
   matrix,
   size,
   front,
+  core,
   markers = [],
   onPick,
   overlay,
@@ -135,6 +137,8 @@ export function SplatViewer({
   matrix: number[];
   size: [number, number, number];
   front: 1 | -1;
+  /** The model's solid core (see Core). */
+  core?: string | null;
   markers?: Marker[];
   /** When set, tapping the car reports the 3D point (used to pin damage). */
   onPick?: (p: [number, number, number]) => void;
@@ -152,6 +156,11 @@ export function SplatViewer({
         <color attach="background" args={['#0a0a0c']} />
         <Spark />
         <DetailBay size={size} />
+        {core && (
+          <Suspense fallback={null}>
+            <Core url={core} matrix={matrix} front={front} />
+          </Suspense>
+        )}
         <Splat
           url={url}
           matrix={matrix}

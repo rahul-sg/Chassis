@@ -267,7 +267,7 @@ def ground_haze(v, xyz: np.ndarray, keep: np.ndarray, place: dict) -> np.ndarray
 
 
 def clean(ply: Path, txt: Path, masks: Path, out: Path, length: float, keep_share: float = 0.6,
-          length_known: bool = False) -> dict:
+          length_known: bool = False, paint: str | None = None) -> dict:
     """Filter the trained splats down to the car and place it. `length` is used as given when
     `length_known` (you entered it); otherwise the camera height sets the scale if it can, and
     `length` (typical for the size class) is the fallback."""
@@ -300,5 +300,12 @@ def clean(ply: Path, txt: Path, masks: Path, out: Path, length: float, keep_shar
             place, source = rescale(place, measured), "camera"
     kept = v[keep]
     PlyData([PlyElement.describe(kept, "vertex")], text=False).write(str(out))
-    return {"splats": int(keep.sum()), "removed": int((~keep).sum()), "floaters": voted - int(keep.sum()),
+    try:  # the solid core that stops thin panels being seen through (core.py)
+        from . import core
+
+        core.build(out, place["matrix"], place["size"], out.with_name("core.glb"), paint)
+        made = True
+    except Exception:  # the model still works without it
+        made = False
+    return {"splats": int(keep.sum()), "removed": int((~keep).sum()), "floaters": voted - int(keep.sum()), "core": made,
             "lengthSource": source, **place}

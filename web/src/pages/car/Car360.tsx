@@ -126,6 +126,7 @@ function Showroom({ car, cap, readOnly = false }: { car: Car; cap: Capture; read
         matrix={cap.transform!}
         size={cap.size!}
         front={front}
+        core={cap.core}
         markers={markers(car, cap)}
         overlay={
           !readOnly && (

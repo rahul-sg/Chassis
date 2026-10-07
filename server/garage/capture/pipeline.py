@@ -136,7 +136,7 @@ def run(state: dict) -> dict:
     out = MEDIA / "captures" / job
     out.mkdir(parents=True, exist_ok=True)
     info = clean.clean(ply, dataset / "sparse" / "txt", dataset / "masks", out / "car.ply", length,
-                       length_known=source == "you")
+                       length_known=source == "you", paint=(car.get("color") or {}).get("hex"))
     length, source = info["size"][0], info["lengthSource"]
     # Poster: the frame where the car is largest.
     best_frame = max(shots, key=lambda f: (cv2.imread(str(work / "masks" / f.name), cv2.IMREAD_GRAYSCALE) > 127).mean())
@@ -146,6 +146,7 @@ def run(state: dict) -> dict:
     result = {
         "status": "done", "job": job, "splat": f"/media/captures/{job}/car.ply", "poster": f"/media/captures/{job}/poster.jpg",
         "transform": info["matrix"], "size": info["size"], "length": length, "lengthSource": source, "front": 1,
+        "core": f"/media/captures/{job}/core.glb" if info.get("core") else None,
         "stats": {"frames": len(shots), "placed": best["registered"], "splats": info["splats"],
                   "turntable": tt, "minutes": round((time.time() - t0) / 60, 1)},
     }

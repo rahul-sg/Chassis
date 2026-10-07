@@ -113,6 +113,8 @@ export interface Capture {
   size?: [number, number, number];
   /** −1 when the model faces backwards along x (you flipped it). */
   front?: 1 | -1;
+  /** The solid core inside the model (GLB, same coordinates as the splat), so thin panels aren't see-through. */
+  core?: string | null;
   stats?: { frames: number; placed: number; splats: number; turntable: boolean; minutes: number };
   error?: string | null;
   updatedAt?: number;

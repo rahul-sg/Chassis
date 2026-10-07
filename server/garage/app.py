@@ -398,6 +398,7 @@ def garage_scene():
             "color": (car.get("color") or {}).get("hex"), "vclass": vclass,
             "size": [round(length, 2), round(width, 2), round(height, 2)], "sizeSource": source,
             "splat": cap.get("splat") if scanned else None, "transform": cap.get("transform") if scanned else None,
+            "core": cap.get("core") if scanned else None,
             "captureSize": cap.get("size") if scanned else None, "front": cap.get("front", 1),
         })
     return out

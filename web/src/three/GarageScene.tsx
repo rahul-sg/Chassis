@@ -1,12 +1,13 @@
 import { Html, OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { SplatMesh } from '@sparkjsdev/spark';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { carName } from '../lib/store';
 import type { Identity } from '../lib/types';
 import { CAR, carPoints } from './carShape';
+import { Core } from './Core';
 import { GarageRoom, ROOM_SIDE, type RoomBay } from './GarageRoom';
 import { Spark } from './spark';
 
@@ -21,6 +22,8 @@ export interface SceneCar {
   sizeSource: 'scan' | 'you' | 'class';
   splat?: string | null;
   transform?: number[] | null;
+  /** The model's solid core (see Core). */
+  core?: string | null;
   front: 1 | -1;
 }
 
@@ -167,7 +170,14 @@ function Bay({
       </mesh>
       <group position={[0, 0, bay.z]} rotation={[0, -Math.PI / 2, 0]}>
         {scanned ? (
-          <ScannedCar url={car.splat!} matrix={car.transform!} front={car.front} />
+          <>
+            <ScannedCar url={car.splat!} matrix={car.transform!} front={car.front} />
+            {car.core && (
+              <Suspense fallback={null}>
+                <Core url={car.core} matrix={car.transform!} front={car.front} />
+              </Suspense>
+            )}
+          </>
         ) : (
           <StandIn size={car.size} color={car.color} />
         )}

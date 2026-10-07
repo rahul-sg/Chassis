@@ -34,9 +34,11 @@ def main(car_id: str) -> None:
     if not backup.exists():
         shutil.copy(out, backup)
     length, source = _car_length(car)
-    info = clean.clean(trained[-1], dataset / "sparse" / "txt", dataset / "masks", out, length, length_known=source == "you")
+    info = clean.clean(trained[-1], dataset / "sparse" / "txt", dataset / "masks", out, length, length_known=source == "you",
+                       paint=(car.get("color") or {}).get("hex"))
     stats = {**(cap.get("stats") or {}), "splats": info["splats"]}
-    store.update_item("cars", car_id, {"capture": {**cap, "transform": info["matrix"], "size": info["size"],
+    core = cap["splat"].rsplit("/", 1)[0] + "/core.glb" if info.get("core") else None
+    store.update_item("cars", car_id, {"capture": {**cap, "transform": info["matrix"], "size": info["size"], "core": core,
                                                    "length": info["size"][0], "lengthSource": info["lengthSource"],
                                                    "stats": stats}})
     print(f"{info['splats']:,} splats kept (was {(cap.get('stats') or {}).get('splats', '?')}), "

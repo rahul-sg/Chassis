@@ -200,6 +200,7 @@ flowchart TD
 5. **Train** (`capture/train.py`): [Brush](https://github.com/ArthurBrussee/brush) trains the Gaussian splat on the GPU for 12,000 steps at up to 1280 px.
 6. **Clean** (`capture/clean.py`): every splat's centre is projected into 30 frames; it stays if it lands on the car (outline pulled in by 10 px) in at least 60% of the frames that see it. Long splats must keep both ends on the car. Then only the largest connected blob is kept (floaters go), and what's left of the ground goes: haze below the car, flat splats at floor level, low splats outside the car's outline seen from above, pale splats at pavement height, and needle-like streaks.
 7. **Place and scale**: see below. The splat file itself is only filtered, never moved; the viewer applies one 4×4 transform, so view-dependent colour stays correct.
+8. **Solid core** (`capture/core.py`): glossy paint trains into faint splats, so some panels come out thin and you'd see the far wheel or the room through a door. An opaque shape is built inside the body and drawn with the splats: the car's outline seen from the side and front, its width band by band (mirrored, since a car is symmetric), nothing above the scan's top surface (a pickup's bed stays open) or in the tyres (found where the scan dips below the sills; the Lexus's came out at its real 2.64 m wheelbase), pulled 10 cm inside and smoothed. It's coloured the car's paint below the window line and a dark cabin above it. `server/tools/core.py` adds cores to models made before this.
 
 Retries skip finished steps, since each step's output stays in `data/jobs/<id>/`. Filming a car again keeps its current model on show until the new one is built, and brings it back with a note if the new video fails (`capture/record.py`). **Rebuild from the same video** reruns everything on the stored video; `server/tools/reclean.py CAR_ID` reruns only the clean-up and scaling, in seconds.
 
@@ -343,6 +344,7 @@ flowchart LR
         "job": "c94e0c6609",
         "video": "/media/69f85c0c40.mov",
         "splat": "/media/captures/c94e0c6609/car.ply",
+        "core": "/media/captures/c94e0c6609/core.glb",   // the solid core inside it
         "poster": "/media/captures/c94e0c6609/poster.jpg",
         "transform": [ /* 16 numbers, row-major: splat → metres, y up, length along x */ ],
         "size": [4.486, 1.491, 1.837],    // length, height, width (m)
@@ -440,7 +442,7 @@ garage-360/
 │   │   ├── jobs.py             job state on disk: submit, pause, resume, cancel, retry, recover
 │   │   ├── store.py            data/garage.json and data/media
 │   │   ├── paths.py            data/, media/, cache/, tools/
-│   │   ├── capture/            the 3D pipeline: frames, masks, check, sfm, train, clean, record, pipeline
+│   │   ├── capture/            the 3D pipeline: frames, masks, check, sfm, train, clean, core, record, pipeline
 │   │   ├── vision/             models, detect, identify, color, vin, odometer, mods, compare, cutout, studio
 │   │   ├── specs/              epa, nhtsa, sheet, cache
 │   │   ├── guess3d.py          one photo → 3D (TripoSR)
@@ -452,13 +454,14 @@ garage-360/
 │   ├── tests/                  server tests (python server/tests/run.py)
 │   └── tools/
 │       ├── eval_identify.py    measures identification on Stanford Cars
-│       └── reclean.py          reruns a capture's clean-up and scaling
+│       ├── reclean.py          reruns a capture's clean-up and scaling
+│       └── core.py             adds a solid core to models built before cores existed
 ├── web/
 │   ├── index.html
 │   └── src/
 │       ├── App.tsx, main.tsx
 │       ├── pages/              Home, Identify, Spotted, Garage, Car, About, car/{Car360,Capture,Mods,Condition,Sell}
-│       ├── three/              GarageScene, GarageRoom, GarageWalls, DetailBay, SplatViewer, spark, ScanCar, GuessViewer
+│       ├── three/              GarageScene, GarageRoom, GarageWalls, DetailBay, SplatViewer, Core, spark, ScanCar, GuessViewer
 │       ├── ui/                 Header, Footer, Camera, PhotoDrop, SpecSheetView, VinEntry, JobProgress, Spotted, …
 │       ├── lib/                api, store, route, types, vehicle, listing, kbb, adcheck, buying (with tests)
 │       └── styles/global.css

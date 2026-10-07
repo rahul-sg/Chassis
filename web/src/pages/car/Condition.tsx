@@ -283,6 +283,7 @@ export function CarCondition({ car }: { car: Car }) {
             matrix={car.capture!.transform!}
             size={car.capture!.size!}
             front={front}
+            core={car.capture!.core}
             markers={markers}
             onPick={(at) => setDraft({ at })}
           />
