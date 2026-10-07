@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 /** Pages of a car. */
-export const CAR_TABS = ['360', 'specs', 'mods', 'condition', 'sell', 'capture'] as const;
+export const CAR_TABS = ['360', 'specs', 'buying', 'mods', 'condition', 'sell', 'capture'] as const;
 export type CarTab = (typeof CAR_TABS)[number];
 
 export type Route =

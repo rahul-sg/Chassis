@@ -207,7 +207,7 @@ export function Identify({ quick: startQuick = false }: { quick?: boolean }) {
       ],
     });
 
-  const toGarage = async () => {
+  const toGarage = async (status?: 'considering') => {
     if (!identity) return;
     const car = await addCar({
       identity: { ...identity, variant: sheet?.variant },
@@ -215,8 +215,9 @@ export function Identify({ quick: startQuick = false }: { quick?: boolean }) {
       photo: result?.photo,
       photos: result?.photo ? [result.photo] : [],
       specs: sheet ?? undefined,
+      status,
     });
-    go({ page: 'car', id: car.id, tab: 'specs' });
+    go({ page: 'car', id: car.id, tab: status ? 'buying' : 'specs' });
   };
 
   const pct = identity?.confidence != null ? Math.round(identity.confidence * 100) : null;
@@ -468,8 +469,11 @@ export function Identify({ quick: startQuick = false }: { quick?: boolean }) {
                 <div className="ident__row">
                   <YearSelect identity={identity} onYear={(y) => setIdentity({ ...identity, year: y, variant: undefined })} />
                   <div className="actions">
-                    <button className="btn btn--accent" onClick={toGarage}>
+                    <button className="btn btn--accent" onClick={() => void toGarage()}>
                       Add to my garage
+                    </button>
+                    <button className="btn" onClick={() => void toGarage('considering')}>
+                      Thinking of buying it?
                     </button>
                   </div>
                 </div>

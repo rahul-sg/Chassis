@@ -5,7 +5,7 @@ Chassis runs on your Mac and does two things:
 - **Identification with calibrated confidence.** One photo gives the make, model and likely model years, matched against every model in the EPA’s U.S. records since 1984. The match percentage means what it says: on 600 held-out photos, matches shown at 95% or more were right 98% of the time, and those at 50–80% about 75%. A VIN makes it exact.
 - **Metric-accurate 3D from a phone video.** A 30–60 second walk-around becomes a photoreal Gaussian-splat model at true size, scaled from the height the phone was held at (or exactly, from a length you enter). A Lexus UX filmed on an iPhone measured 4.49 × 1.84 × 1.49 m (length × width × height); the real car is 4.50 × 1.84 × 1.54 m.
 
-Around those two: the EPA and NHTSA spec sheet, a collection of every car you've spotted, a one-photo 3D sketch when there's no video, paint and wheel previews, a condition record, a sell kit with a Kelley Blue Book link, and a garage that parks your cars side by side at real size.
+Around those two: a check for a car you're thinking of buying (the VIN against the ad, the history report, the mileage and a fair price), the EPA and NHTSA spec sheet with owner complaints, a collection of every car you've spotted, a one-photo 3D sketch when there's no video, paint and wheel previews, a condition record, a sell kit with a Kelley Blue Book link, and a garage that parks your cars side by side at real size.
 
 Everything runs locally. Photos, videos and 3D models stay in `data/` on your Mac; the only network traffic is NHTSA lookups and the one-time downloads of public data and model weights.
 
@@ -23,6 +23,7 @@ Everything runs locally. Photos, videos and 3D models stay in `data/` on your Ma
   - [Jobs](#jobs)
   - [The website](#the-website)
   - [Rendering in the browser](#rendering-in-the-browser)
+  - [The buying check](#the-buying-check)
   - [Mods, condition and selling](#mods-condition-and-selling)
 - [Data model](#data-model)
 - [API reference](#api-reference)
@@ -38,7 +39,7 @@ Everything runs locally. Photos, videos and 3D models stay in `data/` on your Ma
 | Page | Route | What it does |
 |---|---|---|
 | **Home** | `#/` | The two leads, your garage at a glance, how it works. |
-| **Identify** | `#/identify` | A photo, one camera shot, or **quick spotting** (`#/identify/quick`), where the camera stays open and every car is logged. The result shows the make, model, year range, paint colour, how sure it is and the other likely matches, then the full spec sheet. Correct it with another match, the model year, the VIN (typed or photographed) or a manual pick, and add it to your garage from there. |
+| **Identify** | `#/identify` | A photo, one camera shot, or **quick spotting** (`#/identify/quick`), where the camera stays open and every car is logged. The result shows the make, model, year range, paint colour, how sure it is and the other likely matches, then the full spec sheet. Correct it with another match, the model year, the VIN (typed or photographed) or a manual pick, then add it to your garage, or choose **Thinking of buying it?** to check it over. |
 | **Spotted** | `#/spotted` | Every car identified from a photo, kept automatically: photo, name, headline figures, tallies (count, makes, most seen), sorted by newest or by make. Open one for the full sheet or add it to the garage. |
 | **My garage** | `#/garage` | Your cars parked at real size in a 3D garage (hex lighting, reflective epoxy floor, detailed walls), or as a list. **Compare two cars**: sizes as bars, then their spec sheets row by row. |
 | **Car** | `#/car/<id>/<tab>` | One car, in tabs: |
@@ -46,6 +47,7 @@ Everything runs locally. Photos, videos and 3D models stay in `data/` on your Ma
 | ↳ Specs | `…/specs` | The spec sheet for the chosen engine, transmission and drive: powertrain, economy, running cost, size class, crash ratings and recalls. Every value is labelled with its source. |
 | ↳ Mods | `…/mods` | Repaint the car in one of its photos (gloss, satin or matte), change the wheel finish (black, gunmetal, bronze, silver, white, gold) and tint the windows. Save looks. |
 | ↳ Condition | `…/condition` | Pin scratches and dents on the 3D model or a photo, compare a before and an after photo of the same view (what changed is outlined), and print a dated record. |
+| ↳ Buying | `…/buying` | For a car you're thinking of buying (it replaces Sell; **I bought it** switches back). A summary of what checks out, what to look into and the questions to ask the seller, then six steps: the VIN and what it says the car was built as; the pasted ad checked claim by claim against the VIN; the NICB theft and total-loss check and NHTSA's open-recall check (you run them and note the answer); the Carfax or AutoCheck report read from its PDF or text, or entered by hand; the mileage, typed or read from an odometer photo, against the average and the last reported reading; and a fair price from the KBB value you look up, less what the history shows, set against the asking price. |
 | ↳ Sell | `…/sell` | Studio photos (the car cut out onto a studio, graphite or white backdrop), a listing written from the spec data and what you enter, a Kelley Blue Book link for pricing, and a downloadable kit: a small static website with the photos, listing, specs and the 3D model. |
 | ↳ Capture | `…/capture` | Upload a walk-around and watch it build step by step: a shooting guide, a check of the video's shape and length before uploading, and a pause to ask if the video looks likely to fail. |
 | **How it works** | `#/about` | Each stage explained, accuracy figures, which models are installed, the one-time car-parts model setup, and licences. |
@@ -166,7 +168,8 @@ sequenceDiagram
 `specs/sheet.py` builds the sheet for one model year:
 
 - **EPA** (`specs/epa.py`): `vehicles.csv` from fueleconomy.gov, downloaded once and loaded into `data/cache/epa.sqlite`. Each row is one version of a model (engine × transmission × drive); `baseModel` groups the versions into the families a photo is matched against. From it: engine, fuel, transmission, drive, electric motor, city/highway/combined economy, EV range, annual fuel cost (at 15,000 miles), CO₂ and size class.
-- **NHTSA** (`specs/nhtsa.py`): vPIC VIN decoding (adding horsepower, body, doors, trim and where it was built), recalls, and NCAP 5-star ratings (overall, frontal, side, rollover). No key needed. Answers are cached in `data/cache/web.sqlite` (VIN decodes permanently, recalls for a week), so pages load instantly the second time and work offline.
+- **NHTSA** (`specs/nhtsa.py`): vPIC VIN decoding (adding horsepower, body, doors, trim and where it was built), recalls, owner complaints and NCAP 5-star ratings (overall, frontal, side, rollover). No key needed. Answers are cached in `data/cache/web.sqlite` (VIN decodes permanently, recalls and complaints for a week), so pages load instantly the second time and work offline.
+- **Complaints**: NHTSA files them under its own model names ("UX 200", "UX 250H" for the EPA's "UX"), so each EPA family is matched to NHTSA's names for that year, leaving out names that belong to a more specific EPA family ("Prius c" isn't counted as the Prius). The sheet shows the count, the parts most complained about, how many involved a crash, fire or injury, and the latest in the owners' words.
 - **Version matching**: with a VIN, the EPA version closest to what NHTSA decoded (displacement, drive, cylinders) is chosen; otherwise you pick it.
 - Every value carries its source: "EPA", "NHTSA VIN decode" or "NHTSA 5-star ratings".
 
@@ -294,6 +297,15 @@ flowchart LR
 
 - **Cameras**: the garage view stands at eye level, far enough back to see the whole row, and can't turn past the walls or rise through the ceiling. The detail bay orbits the car and keeps the camera under the ceiling by limiting how far it can look down the further out it goes. On tall, narrow screens (phones), the garage stands closer and the detail bay widens its lens, so the cars don't shrink to specks.
 
+### The buying check
+
+- **The ad** (`web/src/lib/adcheck.ts`): plain rules read the year, make, model, engine (litres, cylinders), drive, transmission, hybrid or electric, turbo, mileage and price from pasted listing text, and each claim is set against the VIN's decode. A field the maker doesn't encode in the VIN is shown as "the VIN doesn't say", never as a match or a mismatch; a CVT counts as an automatic.
+- **NICB and open recalls**: neither has a public API (NHTSA's recall-by-VIN service needs a key and its site blocks automated browsers), so the page copies the VIN, links to each, and records what you saw.
+- **History report** (`server/garage/history.py`): pypdf extracts the PDF's text, and rules written against real Carfax reports (several layouts) and AutoCheck reports read accidents and their dates and severity, structural damage, airbags, insurance total loss, title brands, owners, service records and the last reported mileage. Anything the report doesn't state stays unknown. The PDF is kept in `data/media`.
+- **Odometer photo** (`vision/odometer.py`): EasyOCR reads every number on the cluster; whole numbers of four to six digits near "ODO", "mi" or "km" rank first, trip meters (one decimal), clocks and temperatures are skipped, and you tap the right one.
+- **Fair price** (`web/src/lib/buying.ts`): KBB values assume a clean history, so the KBB value you enter is reduced by the worst finding: 20–40% for a branded title or insurance total loss (KBB's rule of thumb), 10–25% for a reported accident (Carfax), 5–10% if it was minor, 20–30% if structural, airbag or severe. An odometer reading below one already reported blocks the estimate entirely.
+- **No paint-mismatch check**: comparing paint colour panel by panel from photos was tried and dropped. On real photos, reflections move a single panel's colour by 13–16 ΔE, while a repainted panel differs by 2–5, so it would flag every car. When a report shows damage, the page suggests a paint thickness gauge instead.
+
 ### Mods, condition and selling
 
 - **Mods** (`vision/mods.py`): inside the car's outline, each pixel is weighted by how close it is to the car's own paint, so glass, trim, tyres and chrome keep their look. It's then moved to the new colour in Lab space, keeping its brightness relative to the paint, so reflections and shading stay put. Satin and matte soften the highlights. Wheels and windows come from the car-parts model (YOLO11s-seg fine-tuned on Ultralytics' car-parts dataset by the one-time `parts` job): rims are fitted inside each wheel, and side windows are found inside the doors. Previews are cached per photo and settings.
@@ -343,7 +355,9 @@ flowchart LR
       "guess": null,                      // one-photo 3D: { status, job, model: "/media/….glb" }
       "looks": [],                        // saved mods
       "condition": { "pins": [], "comparisons": [] },
-      "sell": { "style": "detailed", "backdrop": "studio", "listing": "For sale: my red-orange 2019 Lexus UX. …" }
+      "sell": { "style": "detailed", "backdrop": "studio", "listing": "For sale: my red-orange 2019 Lexus UX. …" },
+      "status": "own",                    // own (or unset) | considering: a car you're thinking of buying
+      "buying": null                      // for a considering car: { vin, photoGuess, ad, history, mileage, asking, kbb, nicb, openRecalls }
     }
   ],
   "spotted": [
@@ -392,9 +406,12 @@ Served at `http://127.0.0.1:8311`, and at `/api` through the web server. Interac
 | POST | `/api/vin/read` | Photo of a VIN → the VIN, checked and decoded. |
 | GET | `/api/vin/{vin}` | Decode a typed VIN: check digit, make, model, year, trim and the matching EPA family. |
 | GET | `/api/specs` | `year`, `make`, `model`, optional `variant` and `vin` → the spec sheet. |
+| GET | `/api/complaints` | `year`, `make`, `model` → owner complaints to NHTSA: count, parts, crashes, fires, injuries, the latest few. |
+| POST | `/api/history/read` | A Carfax or AutoCheck report (PDF, or `text`) → the facts in it; the PDF is kept. |
+| POST | `/api/odometer/read` | Photo of the instrument cluster → the numbers on it, likely odometer first. |
 | GET | `/api/catalog/makes`, `/api/catalog/models`, `/api/catalog/years` | The EPA catalogue, for picking a car by hand. |
 | GET | `/api/stats` | How many vehicles and families the EPA data holds. |
-| GET, POST, PATCH, DELETE | `/api/cars[/{id}]`, `/api/spotted[/{id}]` | The garage and the Spotted collection. PATCH merges fields. |
+| GET, POST, PATCH, DELETE | `/api/cars[/{id}]`, `/api/spotted[/{id}]` | The garage and the Spotted collection. PATCH merges fields; DELETE also removes the files only that record used (and a car's finished 3D builds). |
 | POST | `/api/media` | Store a file (e.g. another photo of a car). |
 | POST | `/api/cars/{id}/capture` | Upload a walk-around video and queue a capture job. |
 | POST | `/api/cars/{id}/capture/rebuild` | Rebuild from the video already on file. |
@@ -424,11 +441,12 @@ garage-360/
 │   │   ├── store.py            data/garage.json and data/media
 │   │   ├── paths.py            data/, media/, cache/, tools/
 │   │   ├── capture/            the 3D pipeline: frames, masks, check, sfm, train, clean, record, pipeline
-│   │   ├── vision/             models, detect, identify, color, vin, mods, compare, cutout, studio
+│   │   ├── vision/             models, detect, identify, color, vin, odometer, mods, compare, cutout, studio
 │   │   ├── specs/              epa, nhtsa, sheet, cache
 │   │   ├── guess3d.py          one photo → 3D (TripoSR)
 │   │   ├── partsmodel.py       trains the car-parts model (a one-time job)
 │   │   ├── sell.py             studio photos and the listing kit
+│   │   ├── history.py          reads Carfax and AutoCheck reports
 │   │   ├── dimensions.py       typical sizes by EPA size class
 │   │   └── shims/              stand-ins for two packages TripoSR imports
 │   ├── tests/                  server tests (python server/tests/run.py)
@@ -442,7 +460,7 @@ garage-360/
 │       ├── pages/              Home, Identify, Spotted, Garage, Car, About, car/{Car360,Capture,Mods,Condition,Sell}
 │       ├── three/              GarageScene, GarageRoom, GarageWalls, DetailBay, SplatViewer, spark, ScanCar, GuessViewer
 │       ├── ui/                 Header, Footer, Camera, PhotoDrop, SpecSheetView, VinEntry, JobProgress, Spotted, …
-│       ├── lib/                api, store, route, types, vehicle, listing, kbb (with tests)
+│       ├── lib/                api, store, route, types, vehicle, listing, kbb, adcheck, buying (with tests)
 │       └── styles/global.css
 ├── vite.config.ts              dev server, /api and /media proxy, HTTPS for phones
 ├── tools/                      (not in git) Brush, TripoSR, model weights
@@ -487,8 +505,8 @@ npm run typecheck   # TypeScript
 npm run build       # typecheck, then a production build into dist/
 ```
 
-- **Server tests** (`server/tests/`): the job lifecycle (fail and retry, pause then continue or stop, recovery after a restart), capture records and retakes, placement and scaling, HDR conversion, the pre-build video check, the clean-up rules (road, needles, pavement), VIN check digits and reading, studio compositing, depth edges in before/after comparison, the listing page, media paths and typical sizes by class.
-- **Web tests** (`web/src/lib/*.test.ts`): routes (including the old Snap and Spotter links), listing text, Kelley Blue Book links and the VIN helper.
+- **Server tests** (`server/tests/`): the job lifecycle (fail and retry, pause then continue or stop, recovery after a restart), capture records and retakes, placement and scaling, HDR conversion, the pre-build video check, the clean-up rules (road, needles, pavement), VIN check digits and reading, studio compositing, depth edges in before/after comparison, the listing page, media paths, files freed when a record is removed, typical sizes by class, reading history reports, ranking odometer numbers and NHTSA model names.
+- **Web tests** (`web/src/lib/*.test.ts`): routes (including the old Snap and Spotter links), listing text, Kelley Blue Book links, the VIN helper, reading and checking ads, mileage, fair price and the buying summary.
 - **Measuring identification**: `server/.venv/bin/python server/tools/eval_identify.py --n 600 --skip 600` writes a summary with accuracy, calibration bins and the most common mistakes to `data/eval/`. Set `GARAGE_SIGLIP=model,pretrained` to try another SigLIP or CLIP model.
 - **Re-cleaning a capture** after changing `capture/clean.py`: `server/.venv/bin/python server/tools/reclean.py CAR_ID` (keeps the previous model as `car.before.ply`).
 - **Logs**: a job's folder holds `sfm.log`, `brush.log` and, if it failed, `error.log` with the full trace.
@@ -526,7 +544,8 @@ npm run build       # typecheck, then a production build into dist/
 | YOLO11 (Ultralytics) | Finding cars; car-parts model | AGPL-3.0 |
 | Ultralytics car-parts dataset | Training the car-parts model | CC BY 4.0 |
 | SigLIP So400m | Identifying the model | Apache 2.0 |
-| EasyOCR | Reading VINs | Apache 2.0 |
+| EasyOCR | Reading VINs and odometers | Apache 2.0 |
+| pypdf | Reading history report PDFs | BSD-3-Clause |
 | COLMAP / pycolmap | Camera positions | BSD |
 | Brush | Splat training | Apache 2.0 |
 | BiRefNet | Cut-outs | MIT |

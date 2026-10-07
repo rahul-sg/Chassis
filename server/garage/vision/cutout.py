@@ -29,8 +29,9 @@ def birefnet():
     try:
         from transformers import AutoModelForImageSegmentation
 
-        model = AutoModelForImageSegmentation.from_pretrained(REPO, revision=REVISION, trust_remote_code=True)
-        return model.to(DEVICE).eval().half()
+        with gpu:  # see models.py: nothing may run while transformers is loading
+            model = AutoModelForImageSegmentation.from_pretrained(REPO, revision=REVISION, trust_remote_code=True)
+            return model.to(DEVICE).eval().half()
     except Exception:  # offline on first use, or a library mismatch: fall back to YOLO outlines
         return None
 

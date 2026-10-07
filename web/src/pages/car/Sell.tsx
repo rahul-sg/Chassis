@@ -5,6 +5,7 @@ import { href } from '../../lib/route';
 import { carName, useGarage } from '../../lib/store';
 import type { Backdrop, Car, SellInfo, SpecSheet, StudioShot } from '../../lib/types';
 import { fetchSpecs } from '../../lib/vehicle';
+import { Copy } from '../../ui/Copy';
 import { KbbLink } from '../../ui/KbbLink';
 
 const BACKDROPS: { id: Backdrop; label: string; swatch: string }[] = [
@@ -13,22 +14,6 @@ const BACKDROPS: { id: Backdrop; label: string; swatch: string }[] = [
   { id: 'white', label: 'White', swatch: '#fbfbfb' },
 ];
 const num = (v: string) => Number(v.replace(/[^0-9]/g, '')) || undefined;
-
-function Copy({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      className="btn btn--sm"
-      onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1600);
-      }}
-    >
-      {done ? 'Copied' : label}
-    </button>
-  );
-}
 
 function Shot({ url, order, note, onToggle }: { url: string; order: number; note?: string; onToggle: () => void }) {
   return (

@@ -2970,3 +2970,277 @@ code {
     display: none;
   }
 }
+
+/* ---------- Buying: checks on a car you're thinking of buying ---------- */
+.carhead__status {
+  margin: 0;
+}
+.carcard__badges {
+  display: flex;
+  flex-wrap: wrap;
+}
+.chip--static {
+  cursor: default;
+}
+.buy__summary {
+  display: grid;
+  gap: 20px;
+}
+.findings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+.finding {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.finding > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--good);
+  transform: translateY(1px);
+}
+.finding--warn > i {
+  background: var(--warn);
+}
+.finding--bad > i {
+  background: var(--bad);
+}
+.finding p {
+  margin: 0;
+}
+.finding p + p {
+  margin-top: 4px;
+  font-size: 14px;
+}
+.finding__go {
+  font-size: 13px;
+}
+.asks {
+  padding: 18px 20px 6px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.asks .subhead {
+  margin: 0;
+  font-size: 22px;
+}
+.asks ol {
+  margin: 12px 0;
+  padding-left: 20px;
+  color: var(--text);
+}
+.asks li + li {
+  margin-top: 6px;
+}
+.buy__todo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.buy__todo .field__label {
+  margin-right: 4px;
+}
+.buy__step > header .subhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.buy__step > header p {
+  max-width: 760px;
+  margin: 0;
+}
+.buy__n {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid rgba(255, 106, 31, 0.5);
+  border-radius: 50%;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0 32px;
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+.fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.fact dt {
+  color: var(--text-2);
+}
+.fact dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text);
+}
+.fact--good dd {
+  color: var(--good);
+}
+.fact--warn dd {
+  color: var(--warn);
+}
+.fact--bad dd {
+  color: var(--bad);
+}
+.tablewrap {
+  overflow-x: auto;
+}
+.claims {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.claims th {
+  padding: 8px 12px 8px 0;
+  text-align: left;
+  font: 500 11px/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--rule-2);
+}
+.claims td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.claims td:first-child {
+  color: var(--text-2);
+}
+.claim__verdict {
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.claim--match .claim__verdict {
+  color: var(--good);
+}
+.claim--differs .claim__verdict {
+  font-weight: 600;
+  color: var(--bad);
+}
+.buy__checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.buy__check {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.buy__check h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--white);
+}
+.buy__check p {
+  margin: 0;
+  font-size: 14px;
+}
+.chip--clear[aria-pressed='true'] {
+  color: #06150e;
+  background: var(--good);
+  border-color: var(--good);
+}
+.chip--found[aria-pressed='true'] {
+  color: #1d0505;
+  background: var(--bad);
+  border-color: var(--bad);
+}
+.buy__paste {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.buy__paste textarea {
+  width: 100%;
+}
+.buy__manual {
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.buy__manual summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+.buy__manual[open] summary {
+  margin-bottom: 16px;
+}
+.buy__manual .btn {
+  margin-top: 16px;
+}
+.buy__odo {
+  width: 320px;
+}
+.buy__step .actions:has(.buy__odo) {
+  align-items: flex-end;
+}
+.buy__result {
+  margin: 0;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid var(--good);
+}
+.buy__result--warn {
+  border-left-color: var(--warn);
+}
+.buy__result--bad {
+  border-left-color: var(--bad);
+}
+.buy__price {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.buy__price p {
+  margin: 6px 0 0;
+}
+.buy__range {
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+.buy__foot {
+  margin: 0;
+  font-size: 14px;
+}
+@media (max-width: 640px) {
+  .buy__checks,
+  .buy__price {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .buy__odo {
+    width: 100%;
+  }
+}

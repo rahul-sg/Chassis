@@ -16,7 +16,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError('The local engine isn’t running. Start it with npm run dev.', 0);
   }
   if (!res.ok) {
-    let msg = res.statusText;
+    // A crash in the engine has no message meant for people.
+    let msg = res.status >= 500 ? 'Something went wrong in the local engine. Try again; if it keeps happening, restart npm run dev.' : res.statusText;
     try {
       msg = (await res.json()).detail ?? msg;
     } catch {

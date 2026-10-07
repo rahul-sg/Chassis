@@ -108,7 +108,7 @@ function Pitch() {
         </article>
       </div>
       <p className="pitch__rest">
-        Plus: full specs and recalls, a log of every car you spot, paint and wheel previews, a record of dents and scratches, a kit for
+        Plus: a check for a car you’re thinking of buying, full specs, recalls and owner complaints, a log of every car you spot, paint and wheel previews, a record of dents and scratches, a kit for
         selling, and a garage that parks your cars side by side.
       </p>
     </section>

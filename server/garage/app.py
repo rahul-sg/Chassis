@@ -96,7 +96,32 @@ def _vin_result(vin: str) -> dict:
         "vin": vin, "checkDigit": "1" not in codes, "decoded": bool(d.get("Make") and d.get("ModelYear")),
         "family": fam, "make": d.get("Make", "").title(), "model": d.get("Model"), "year": d.get("ModelYear"),
         "trim": d.get("Trim"), "body": d.get("BodyClass"), "engine": d.get("DisplacementL"),
+        "details": _vin_details(d),
     }
+
+
+def _vin_details(d: dict) -> dict:
+    """What the VIN says the car was built as, for checking a listing against. Missing fields are
+    left out: makers don't encode everything in the VIN."""
+    def num(k, kind=int):
+        try:
+            return kind(float(d[k])) if d.get(k) else None
+        except ValueError:
+            return None
+
+    config = {"V-Shaped": "V", "In-Line": "I", "Horizontally opposed (boxer)": "H", "W-Shaped": "W"}.get(d.get("EngineConfiguration", ""))
+    plant = ", ".join(x.title() for x in (d.get("PlantCity"), d.get("PlantCountry", "").split(" (")[0]) if x)
+    out = {
+        "year": num("ModelYear"), "make": d.get("Make", "").title() or None, "model": d.get("Model"),
+        "trim": d.get("Trim") or d.get("Trim2"), "series": d.get("Series"), "body": d.get("BodyClass"),
+        "doors": num("Doors"), "drive": d.get("DriveType"), "cylinders": num("EngineCylinders"),
+        "displacement": round(num("DisplacementL", float), 1) if num("DisplacementL", float) else None,
+        "config": config, "fuel": d.get("FuelTypePrimary"), "fuel2": d.get("FuelTypeSecondary"),
+        "electrification": d.get("ElectrificationLevel"), "turbo": True if d.get("Turbo") == "Yes" else None,
+        "transmission": d.get("TransmissionStyle"), "speeds": num("TransmissionSpeeds"), "hp": num("EngineHP"),
+        "plant": plant or None,
+    }
+    return {k: v for k, v in out.items() if v is not None}
 
 
 @app.post("/api/vin/read")
@@ -133,6 +158,45 @@ def specs(year: int, make: str, model: str, variant: int | None = None, vin: str
         return sheet.build(year, make, model, variant, vin)
     except LookupError as e:
         raise HTTPException(404, str(e))
+
+
+@app.get("/api/complaints")
+def complaints(year: int, make: str, model: str):
+    """Owner complaints to NHTSA about this model year."""
+    try:
+        return nhtsa.complaints(year, make, model, [m["model"] for m in epa.models(make)])
+    except Exception:
+        raise HTTPException(503, "NHTSA’s complaints service couldn’t be reached. Try again when you’re online.")
+
+
+@app.post("/api/history/read")
+async def read_history(file: UploadFile | None = None, text: str = Form("")):
+    """A Carfax or AutoCheck report you have (PDF, or its text pasted) → the facts in it. The PDF
+    is kept with your files so you can open it again."""
+    from . import history
+
+    url = None
+    data = await file.read() if file is not None else b""
+    if data:
+        if not data.startswith(b"%PDF"):
+            raise HTTPException(400, "That isn’t a PDF. Save the report as a PDF, or paste its text.")
+        text = await run_in_threadpool(history.pdf_text, data)
+        url = store.save_media(data, "pdf")
+    if len(text.strip()) < 200:
+        raise HTTPException(400, "There’s no report text in that. Use the report’s PDF, or paste its whole text.")
+    facts = history.parse(text)
+    if not facts["source"] and facts["accidents"] is None and facts["owners"] is None:
+        raise HTTPException(400, "That doesn’t look like a Carfax or AutoCheck report.")
+    return {**facts, "file": url}
+
+
+@app.post("/api/odometer/read")
+async def read_odometer(file: UploadFile):
+    """Photo of the instrument cluster → the numbers in it, most likely odometer first."""
+    from .vision import odometer
+
+    img = _open_image(await file.read())
+    return await run_in_threadpool(odometer.read, img)
 
 
 @app.get("/api/catalog/makes")
@@ -479,6 +543,13 @@ def update(kind: str, item_id: str, patch: dict):
 
 @app.delete("/api/{kind}/{item_id}")
 def delete(kind: str, item_id: str):
+    """Remove a car or spotted car with its files. A car's finished 3D builds go too (their frames
+    and training files are in data/jobs); one still building is left to finish on its own."""
     if not store.delete_item(_kind(kind), item_id):
         raise HTTPException(404, "Not found")
+    if kind == "cars":
+        for state in jobs.JOBS.glob("*/state.json"):
+            job = json.loads(state.read_text())
+            if job.get("carId") == item_id and job.get("status") not in ("queued", "running"):
+                shutil.rmtree(state.parent, ignore_errors=True)
     return {"ok": True}

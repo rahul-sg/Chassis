@@ -48,6 +48,15 @@ export function SpottedDialog({ s, onClose, onRemoved }: { s: Spotted; onClose: 
             Add to my garage
           </button>
           <button
+            className="btn"
+            onClick={async () => {
+              const car = await addCar({ identity: s.identity, color: s.color, photo: s.photo, photos: [s.photo], status: 'considering' });
+              go({ page: 'car', id: car.id, tab: 'buying' });
+            }}
+          >
+            Thinking of buying it?
+          </button>
+          <button
             className="btn btn--ghost"
             onClick={async () => {
               await removeSpotted(s.id);

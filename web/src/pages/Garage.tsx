@@ -208,12 +208,15 @@ export function Garage() {
             const working = c.capture && ['queued', 'running'].includes(c.capture.status);
             const asking = c.capture?.status === 'paused';
             return (
-              <a key={c.id} className="carcard" href={href({ page: 'car', id: c.id, tab: '360' })}>
+              <a key={c.id} className="carcard" href={href({ page: 'car', id: c.id, tab: c.status === 'considering' ? 'buying' : '360' })}>
                 <CarThumb car={c} />
                 <span className="carcard__name">{c.nickname || carName(c.identity)}</span>
                 <span className="carcard__meta">{c.nickname ? carName(c.identity) : c.color?.name ?? ''}</span>
-                <span className={`badge ${has3d ? 'badge--good' : working ? 'badge--busy' : asking ? 'badge--ask' : ''}`}>
-                  {has3d ? '3D model ready' : working ? 'Building 3D model…' : asking ? 'Video needs a look' : 'No 3D model yet'}
+                <span className="carcard__badges">
+                  {c.status === 'considering' && <span className="badge badge--ask">Thinking of buying</span>}
+                  <span className={`badge ${has3d ? 'badge--good' : working ? 'badge--busy' : asking ? 'badge--ask' : ''}`}>
+                    {has3d ? '3D model ready' : working ? 'Building 3D model…' : asking ? 'Video needs a look' : 'No 3D model yet'}
+                  </span>
                 </span>
               </a>
             );

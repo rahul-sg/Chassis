@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Candidate, Identity, PaintColor, Spec, SpecSheet } from './types';
+import type { Candidate, Identity, PaintColor, Spec, SpecSheet, VinDetails } from './types';
 
 export interface IdentifyResult {
   photo: string;
@@ -24,6 +24,7 @@ export interface VinResult {
   year: string | null;
   trim: string | null;
   body: string | null;
+  details?: VinDetails;
   tried?: string[];
 }
 

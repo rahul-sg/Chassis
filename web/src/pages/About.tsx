@@ -41,7 +41,12 @@ const STAGES = [
   {
     name: 'Spec sheet',
     what: 'Engine, gearbox, drive, fuel economy, running cost, size class, crash ratings and recalls, each shown with where it came from.',
-    how: 'EPA fueleconomy.gov data, stored on this Mac · NHTSA recalls and NCAP ratings, cached so they work offline',
+    how: 'EPA fueleconomy.gov data, stored on this Mac · NHTSA recalls, owner complaints and NCAP ratings, cached so they work offline',
+  },
+  {
+    name: 'Buying check',
+    what: 'For a car you’re thinking of buying: what the VIN says it was built as, checked against the ad; the official NICB and NHTSA recall checks, which you run and note; the Carfax or AutoCheck report you have, read into plain facts; the mileage against the average and the last reported reading; and a fair price from the KBB value, less what the history shows. Then the questions to ask the seller.',
+    how: 'NHTSA VIN decoder · plain rules for the ad and the report (pypdf reads the PDF) · EasyOCR for an odometer photo · KBB’s 20–40% for a branded title, Carfax’s 10–25% for a reported accident',
   },
   {
     name: 'Walk-around 360',

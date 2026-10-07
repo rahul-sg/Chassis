@@ -26,5 +26,7 @@ kornia>=0.8
 omegaconf==2.3.0
 trimesh>=4.4,<5
 scikit-image>=0.24
+# Reading the vehicle history reports you add (Carfax, AutoCheck PDFs)
+pypdf>=5
 # Only for server/tools/eval_identify.py
 polars>=1.0

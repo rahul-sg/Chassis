@@ -11,15 +11,26 @@ import { Car360 } from './car/Car360';
 import { CarCondition } from './car/Condition';
 import { CarMods } from './car/Mods';
 import { CarSell } from './car/Sell';
+import { CarBuying } from './car/Buying';
 import { KbbLink } from '../ui/KbbLink';
 
-const TABS: { id: CarTab; label: string }[] = [
-  { id: '360', label: '360' },
-  { id: 'specs', label: 'Specs' },
-  { id: 'mods', label: 'Mods' },
-  { id: 'condition', label: 'Condition' },
-  { id: 'sell', label: 'Sell' },
-];
+/** A car you own can be sold; one you're thinking of buying gets checked instead. */
+const tabs = (car: Car): { id: CarTab; label: string }[] =>
+  car.status === 'considering'
+    ? [
+        { id: '360', label: '360' },
+        { id: 'buying', label: 'Buying' },
+        { id: 'specs', label: 'Specs' },
+        { id: 'condition', label: 'Condition' },
+        { id: 'mods', label: 'Mods' },
+      ]
+    : [
+        { id: '360', label: '360' },
+        { id: 'specs', label: 'Specs' },
+        { id: 'mods', label: 'Mods' },
+        { id: 'condition', label: 'Condition' },
+        { id: 'sell', label: 'Sell' },
+      ];
 
 function Specs({ car }: { car: Car }) {
   const updateCar = useGarage((s) => s.updateCar);
@@ -118,6 +129,7 @@ function Header({ car }: { car: Car }) {
             <h1 className="display carhead__name">{car.nickname || carName(i)}</h1>
           )}
           <p className="carhead__meta">
+            {car.status === 'considering' && <span className="badge badge--ask carhead__status">Thinking of buying</span>}
             {car.nickname && <span>{carName(i)}</span>}
             {i?.trim && <span>{i.trim}</span>}
             {car.color && (
@@ -129,6 +141,27 @@ function Header({ car }: { car: Car }) {
           </p>
         </div>
         <div className="actions">
+          {car.status === 'considering' ? (
+            <button
+              className="btn btn--sm"
+              onClick={async () => {
+                await updateCar(car.id, { status: 'own' });
+                go({ page: 'car', id: car.id, tab: '360' });
+              }}
+            >
+              I bought it
+            </button>
+          ) : (
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={async () => {
+                await updateCar(car.id, { status: 'considering' });
+                go({ page: 'car', id: car.id, tab: 'buying' });
+              }}
+            >
+              Thinking of buying it?
+            </button>
+          )}
           {!naming && (
             <button className="btn btn--ghost btn--sm" onClick={() => setNaming(true)}>
               {car.nickname ? 'Rename' : 'Give it a name'}
@@ -184,7 +217,7 @@ export function CarPage({ id, tab }: { id: string; tab: CarTab }) {
     <div className="page wrap carpage">
       <Header car={car} />
       <nav className="cartabs" aria-label="Car">
-        {TABS.map((t) => (
+        {tabs(car).map((t) => (
           <a key={t.id} href={href({ page: 'car', id, tab: t.id })} aria-current={active === t.id ? 'page' : undefined}>
             {t.label}
           </a>
@@ -197,6 +230,7 @@ export function CarPage({ id, tab }: { id: string; tab: CarTab }) {
         {tab === 'mods' && <CarMods car={car} />}
         {tab === 'condition' && <CarCondition car={car} />}
         {tab === 'sell' && <CarSell car={car} />}
+        {tab === 'buying' && <CarBuying car={car} />}
       </div>
     </div>
   );

@@ -43,17 +43,24 @@ def parts_model():
     if _parts is None and PARTS_MODEL.exists():
         from ultralytics import YOLO
 
-        _parts = YOLO(str(PARTS_MODEL))
+        with gpu:
+            _parts = YOLO(str(PARTS_MODEL))
     return _parts
 
 
 def parts(img: np.ndarray) -> dict[str, np.ndarray]:
-    """Part name → mask (bool), merged over instances. Empty without the parts model."""
+    """Part name → mask (bool), merged over instances. Empty without the parts model, and empty
+    (paint previews still work) if it fails: the broken copy is dropped so the next call reloads it."""
+    global _parts
     model = parts_model()
     if model is None:
         return {}
-    with gpu:
-        r = model.predict(img[:, :, ::-1], conf=0.25, imgsz=960, device=DEVICE, retina_masks=True, verbose=False)[0]
+    try:
+        with gpu:
+            r = model.predict(img[:, :, ::-1], conf=0.25, imgsz=960, device=DEVICE, retina_masks=True, verbose=False)[0]
+    except Exception:
+        _parts = None
+        return {}
     out: dict[str, np.ndarray] = {}
     if r.masks is None:
         return out

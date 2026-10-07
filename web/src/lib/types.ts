@@ -73,6 +73,17 @@ export interface SpecSheet {
   offline?: boolean;
 }
 
+/** Owner complaints to NHTSA about one model year. */
+export interface Complaints {
+  count: number;
+  crashes: number;
+  fires: number;
+  injuries: number;
+  deaths: number;
+  components: { name: string; count: number }[];
+  latest: { date: string; components: string; summary: string }[];
+}
+
 /** A spot on the 3D model you can tap for a spec or a note. */
 export interface Hotspot {
   id: string;
@@ -231,6 +242,75 @@ export interface Car {
   condition?: Condition;
   sell?: SellInfo;
   guess?: Guess;
+  /** considering: a car you're thinking of buying (it gets the Buying tab instead of Sell). Unset means yours. */
+  status?: 'own' | 'considering';
+  buying?: BuyingInfo;
+}
+
+/** What the VIN says the car was built as (NHTSA's decoder). Makers leave some of it out. */
+export interface VinDetails {
+  year?: number;
+  make?: string;
+  model?: string;
+  trim?: string;
+  series?: string;
+  body?: string;
+  doors?: number;
+  drive?: string;
+  cylinders?: number;
+  displacement?: number;
+  config?: 'V' | 'I' | 'H' | 'W';
+  fuel?: string;
+  fuel2?: string;
+  electrification?: string;
+  turbo?: boolean;
+  transmission?: string;
+  speeds?: number;
+  hp?: number;
+  plant?: string;
+}
+
+/** The facts in a vehicle history report, read from a Carfax or AutoCheck report or entered by you. null: it doesn't say. */
+export interface HistoryFacts {
+  source: 'carfax' | 'autocheck' | 'you' | null;
+  vin?: string | null;
+  reportDate?: string | null;
+  accidents: boolean | null;
+  damageDates?: string[];
+  damageCount?: number | null;
+  severity?: 'minor' | 'moderate' | 'severe' | null;
+  structural?: boolean | null;
+  airbag?: boolean | null;
+  totalLoss?: boolean | null;
+  title: 'clean' | 'branded' | null;
+  titleBrands?: string[];
+  owners?: number | null;
+  serviceRecords?: number | null;
+  lastMileage?: number | null;
+  lastMileageDate?: string | null;
+  odometerProblem?: boolean | null;
+  /** The report's PDF, kept with your files. */
+  file?: string | null;
+}
+
+/** What a check you did yourself on another site said. */
+export type CheckAnswer = 'clear' | 'found';
+
+/** Your checks on a car you're thinking of buying. */
+export interface BuyingInfo {
+  /** The VIN's decode, kept from when you added it. */
+  vin?: VinDetails;
+  /** What the photo looked like before the VIN was added, to compare. */
+  photoGuess?: { make: string; model: string; yearFrom: number; yearTo: number; confidence?: number };
+  /** The listing, pasted. */
+  ad?: string;
+  history?: HistoryFacts;
+  mileage?: number;
+  asking?: number;
+  /** Kelley Blue Book private-party value you looked up. */
+  kbb?: number;
+  nicb?: CheckAnswer;
+  openRecalls?: CheckAnswer;
 }
 
 /** A 3D shape guessed from one photo (TripoSR): estimated, not measured. */

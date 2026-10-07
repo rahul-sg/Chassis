@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ApiError } from '../lib/api';
 import { fetchSpecs } from '../lib/vehicle';
 import type { SpecSheet } from '../lib/types';
+import { Complaints } from './Complaints';
+import { Copy } from './Copy';
 
 interface Props {
   year: number;
@@ -107,8 +109,15 @@ export function SpecSheetView({ year, make, model, variant, vin, onLoaded, onVar
         ) : (
           <>
             <p className="muted">
-              For every {year} {make} {model}. Whether yours still needs the fix depends on its VIN: check at nhtsa.gov/recalls.
+              For every {year} {make} {model}. Whether a particular car still needs the fix depends on its VIN
+              {vin ? ': copy it, then look it up on NHTSA.' : '.'}
             </p>
+            <div className="actions">
+              {vin && <Copy text={vin} label="Copy the VIN" />}
+              <a className="btn btn--sm" href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener noreferrer">
+                Check {vin ? 'this car' : 'a VIN'} on NHTSA ↗
+              </a>
+            </div>
             <ul className="recalls">
               {recalls.map((r, i) => (
                 <li key={r.campaign}>
@@ -133,6 +142,7 @@ export function SpecSheetView({ year, make, model, variant, vin, onLoaded, onVar
           </>
         )}
       </section>
+      <Complaints year={year} make={make} model={model} />
       <p className="sheet__sources">Sources: {sheet.sources.join(' · ')}</p>
     </div>
   );

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import threading
 import time
 import uuid
@@ -68,14 +69,43 @@ def update_item(kind: str, item_id: str, patch: dict) -> dict | None:
 
 
 def delete_item(kind: str, item_id: str) -> bool:
+    """Remove a record, and the files it pointed to that nothing else uses (a car's photo is
+    often also its Spotted entry's photo)."""
     with _lock:
         db = _read()
-        keep = [x for x in db[kind] if x["id"] != item_id]
-        if len(keep) == len(db[kind]):
+        gone = next((x for x in db[kind] if x["id"] == item_id), None)
+        if gone is None:
             return False
-        db[kind] = keep
+        db[kind] = [x for x in db[kind] if x["id"] != item_id]
         _write(db)
-        return True
+    still = media_urls(db)
+    for url in media_urls(gone) - still:
+        path = media_path(url)
+        if path.is_file():
+            path.unlink()
+        # A 3D model's folder (its splat, poster and earlier versions) goes with it.
+        parts = url.split("/")
+        if len(parts) > 4 and parts[2] == "captures" and not any(u.startswith(f"/media/captures/{parts[3]}/") for u in still):
+            folder = media_path(f"/media/captures/{parts[3]}/x").parent
+            if folder.parent == (MEDIA / "captures").resolve():
+                shutil.rmtree(folder, ignore_errors=True)
+    return True
+
+
+def media_urls(x) -> set[str]:
+    """Every /media/… URL anywhere inside a record."""
+    if isinstance(x, str):
+        return {x} if x.startswith("/media/") else set()
+    if isinstance(x, dict):
+        x = list(x.values())
+    if isinstance(x, list):
+        return set().union(*map(media_urls, x)) if x else set()
+    return set()
+
+
+def orphaned_files(item: dict, rest: dict) -> set[str]:
+    """The files `item` points to that nothing in `rest` (the garage without it) points to."""
+    return media_urls(item) - media_urls(rest)
 
 
 def save_media(data: bytes, ext: str) -> str:
